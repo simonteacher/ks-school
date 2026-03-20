@@ -23,7 +23,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--gp)}::-webkit-scrollbar-thumb{background:var(--gl);border-radius:3px}
 
 /* ── SETUP ── */
-#setup-screen{position:fixed;inset:0;z-index:2000;background:linear-gradient(160deg,var(--navy) 0%,#061018 55%,var(--navy2) 100%);display:flex;align-items:center;justify-content:center}
+#setup-screen{display:none !important}
 .setup-box{background:#fff;border-radius:24px;padding:44px 40px;width:500px;box-shadow:0 32px 80px rgba(0,0,0,.4);animation:rise .4s ease}
 @keyframes rise{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 .s-logo{text-align:center;margin-bottom:24px}
@@ -232,6 +232,20 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--g);cursor:pointer
 /* ── SELECT ALL ── */
 .sel-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#eef9f2;border-radius:9px;margin-bottom:14px;font-size:13px;color:var(--gd);font-weight:600}
 .sel-bar .cnt{color:var(--g)}
+
+/* ── CALC RESULT ── */
+.calc-result{background:linear-gradient(135deg,var(--gd),var(--gm));border-radius:14px;padding:18px 20px;margin:14px 0;display:flex;justify-content:space-between;align-items:center}
+
+/* ── STAT TABLE ── */
+.stat-table{width:100%;border-collapse:collapse}
+.stat-table th{background:#f0faf3;padding:9px 13px;font-size:11px;font-weight:700;color:var(--txl);text-align:left;border-bottom:1px solid var(--br)}
+.stat-table td{padding:10px 13px;font-size:13px;border-bottom:1px solid #f0f7f2}
+.stat-table tr:last-child td{border-bottom:none}
+
+/* ── XP BAR INLINE ── */
+.xp-bar-wrap{display:flex;align-items:center;gap:8px}
+.xp-bar-wrap .bar-bg{flex:1;background:var(--gp);border-radius:4px;height:7px;overflow:hidden;min-width:60px}
+.xp-bar-wrap .bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--g),var(--gl))}
 </style>
 </head>
 <body>
@@ -470,10 +484,16 @@ function showLogin() {
   g('setup-screen').style.display = 'none';
   g('login-screen').classList.add('on');
 }
+// ── 고정 Supabase 연결 (설정 화면 없이 바로 시작) ──
+const SUPA_URL = 'https://jhbeuqsuswlsvazuoyia.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpoYmV1cXN1c3dsc3ZhenVveWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzA4OTMsImV4cCI6MjA4OTU0Njg5M30.eQLdpKJPtwA5_Mt0E6zCCW5Ce4Yf7Mt8CUMg_YudBnw';
 window.addEventListener('load', () => {
-  const url = localStorage.getItem('ks_url'), key = localStorage.getItem('ks_key');
-  if (url && key) {
-    try { DB = window.supabase.createClient(url, key); showLogin(); } catch(e) {}
+  try {
+    DB = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    DEMO = false;
+    showLogin();
+  } catch(e) {
+    console.error(e);
   }
 });
 
@@ -563,6 +583,7 @@ async function reloadNotices() {
 const ADMIN_NAV = [
   {id:'a-dashboard',icon:'📊',label:'대시보드'},
   {id:'a-students', icon:'👩‍🎓',label:'학생 관리'},
+  {id:'a-stats',    icon:'📈',label:'학생 통계'},
   {id:'a-missions', icon:'🎯',label:'미션 관리'},
   {id:'a-notices',  icon:'📢',label:'공지사항'},
   {id:'a-settings', icon:'⚙️',label:'시스템 설정'},
@@ -614,6 +635,7 @@ function renderPage(id) {
   const map = {
     'a-dashboard': renderAdminDashboard,
     'a-students':  renderStudents,
+    'a-stats':     renderStudentStats,
     'a-missions':  renderMissions,
     'a-notices':   renderAdminNotices,
     'a-settings':  renderSettings,
@@ -964,31 +986,84 @@ async function bulkRegister() {
 function exportStudentExcel() {
   const ss=CACHE.students;
   if(!ss.length){toast('학생 데이터가 없습니다','warn');return;}
-  const header=['학번','이름','학년','반','번호','연락처','생년월일','XP','나무단계','상태'];
-  const rows=ss.map(s=>{
-    const t=treeStage(s.xp||0);
-    return[s.id,s.name,s.grade+'학년',s.class+'반',s.num+'번',s.phone||'',s.birth||'',s.xp||0,t.n,s.status||'재학'];
-  });
-  // XP 통계 추가
-  const total=ss.length, avgXP=total?Math.round(ss.reduce((a,s)=>a+(s.xp||0),0)/total):0;
-  const g1=ss.filter(s=>s.grade==='1').length, g2=ss.filter(s=>s.grade==='2').length, g3=ss.filter(s=>s.grade==='3').length;
 
+  const today = new Date().toLocaleDateString('ko-KR');
   let csv='\uFEFF'; // BOM for Excel Korean
-  csv+=`광주경신여자고등학교 학생 통계 — ${new Date().toLocaleDateString('ko-KR')}\n\n`;
-  csv+=`전체학생,${total},1학년,${g1},2학년,${g2},3학년,${g3},평균XP,${avgXP}\n\n`;
-  csv+=header.join(',')+'\n';
-  csv+=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
-  // 학년별 통계 시트 데이터 추가
-  csv+=`\n\n학년별 XP 순위 Top 5\n`;
-  csv+='학년,이름,반,XP\n';
-  [...ss].sort((a,b)=>(b.xp||0)-(a.xp||0)).slice(0,10).forEach(s=>{
-    csv+=`"${s.grade}학년","${s.name}","${s.class}반","${s.xp||0}"\n`;
+
+  // ── 1. 헤더 정보 ──
+  csv+=`광주경신여자고등학교 경신그린 — 학생 통계 보고서\n`;
+  csv+=`생성일,${today}\n\n`;
+
+  // ── 2. 전체 요약 ──
+  const total=ss.length;
+  const avgXP=total?Math.round(ss.reduce((a,s)=>a+(s.xp||0),0)/total):0;
+  const maxXP=Math.max(...ss.map(s=>s.xp||0));
+  const g1=ss.filter(s=>s.grade==='1').length;
+  const g2=ss.filter(s=>s.grade==='2').length;
+  const g3=ss.filter(s=>s.grade==='3').length;
+  const active=ss.filter(s=>s.status==='재학').length;
+  csv+=`[전체 요약]\n`;
+  csv+=`전체 학생,${total},재학생,${active},평균 XP,${avgXP},최고 XP,${maxXP}\n`;
+  csv+=`1학년,${g1},2학년,${g2},3학년,${g3}\n\n`;
+
+  // ── 3. 학생 전체 명단 ──
+  csv+=`[전체 학생 명단]\n`;
+  csv+=`학번,이름,학년,반,번호,연락처,생년월일,XP,나무단계,상태\n`;
+  ss.forEach(s=>{
+    const t=treeStage(s.xp||0);
+    csv+=`"${s.id}","${s.name}","${s.grade}학년","${s.class}반","${s.num||''}번","${s.phone||''}","${s.birth||''}","${s.xp||0}","${t.n}","${s.status||'재학'}"\n`;
+  });
+
+  // ── 4. 학년별 통계 ──
+  csv+=`\n[학년별 통계]\n`;
+  csv+=`학년,학생 수,재학생,평균 XP,최고 XP,총 XP\n`;
+  ['1','2','3'].forEach(gr=>{
+    const list=ss.filter(s=>s.grade===gr);
+    if(!list.length) return;
+    const avg=Math.round(list.reduce((a,s)=>a+(s.xp||0),0)/list.length);
+    const max=Math.max(...list.map(s=>s.xp||0));
+    const ttl=list.reduce((a,s)=>a+(s.xp||0),0);
+    const act=list.filter(s=>s.status==='재학').length;
+    csv+=`"${gr}학년","${list.length}","${act}","${avg}","${max}","${ttl}"\n`;
+  });
+
+  // ── 5. 반별 통계 ──
+  csv+=`\n[반별 통계]\n`;
+  csv+=`학년,반,학생 수,평균 XP,최고 XP,총 XP,상위 학생\n`;
+  const classMap={};
+  ss.forEach(s=>{
+    const key=`${s.grade}-${s.class}`;
+    if(!classMap[key]) classMap[key]={grade:s.grade,cls:s.class,students:[]};
+    classMap[key].students.push(s);
+  });
+  Object.values(classMap).sort((a,b)=>a.grade-b.grade||a.cls-b.cls).forEach(c=>{
+    const avg=Math.round(c.students.reduce((a,s)=>a+(s.xp||0),0)/c.students.length);
+    const max=Math.max(...c.students.map(s=>s.xp||0));
+    const ttl=c.students.reduce((a,s)=>a+(s.xp||0),0);
+    const best=[...c.students].sort((a,b)=>(b.xp||0)-(a.xp||0))[0];
+    csv+=`"${c.grade}학년","${c.cls}반","${c.students.length}","${avg}","${max}","${ttl}","${best?best.name:''}"\n`;
+  });
+
+  // ── 6. XP 상위 10명 ──
+  csv+=`\n[XP 상위 10명]\n`;
+  csv+=`순위,이름,학년,반,XP,나무단계\n`;
+  [...ss].sort((a,b)=>(b.xp||0)-(a.xp||0)).slice(0,10).forEach((s,i)=>{
+    const t=treeStage(s.xp||0);
+    csv+=`"${i+1}위","${s.name}","${s.grade}학년","${s.class}반","${s.xp||0}","${t.n}"\n`;
+  });
+
+  // ── 7. 나무 단계 분포 ──
+  csv+=`\n[나무 단계 분포]\n`;
+  csv+=`단계,이모지,학생 수\n`;
+  [{n:'새싹',e:'🌱',min:0,max:200},{n:'새잎',e:'🌿',min:200,max:600},{n:'작은나무',e:'🌾',min:600,max:1300},{n:'큰나무',e:'🌲',min:1300,max:2300},{n:'거목',e:'🌳',min:2300,max:99999}].forEach(t=>{
+    const cnt=ss.filter(s=>(s.xp||0)>=t.min&&(s.xp||0)<t.max).length;
+    csv+=`"${t.n}","${t.e}","${cnt}"\n`;
   });
 
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=`경신그린_학생통계_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click(); toast('📊 엑셀 파일 다운로드 완료');
+  a.click(); toast('📊 엑셀 파일 다운로드 완료 (학년/반/나무 통계 포함)');
 }
 
 function updateAdminStats() {
@@ -996,19 +1071,191 @@ function updateAdminStats() {
   const dash=g('ct')?.querySelector('.pg');
 }
 
+// ── 학생 통계 페이지 ──
+function renderStudentStats() {
+  const ss = CACHE.students;
+  if (!ss.length) {
+    g('ct').innerHTML = `<div class="pg on"><div class="pg-hd"><h2>📈 학생 통계</h2></div><p style="padding:40px;color:var(--txl);text-align:center">등록된 학생이 없습니다</p></div>`;
+    return;
+  }
+
+  // 학년별 집계
+  const byGrade = ['1','2','3'].map(gr => {
+    const list = ss.filter(s => s.grade === gr);
+    const avg = list.length ? Math.round(list.reduce((a,s)=>a+(s.xp||0),0)/list.length) : 0;
+    const active = list.filter(s=>s.status==='재학').length;
+    return { gr, cnt: list.length, avg, active };
+  });
+
+  // 반별 통계
+  const classMap = {};
+  ss.forEach(s => {
+    const key = `${s.grade}-${s.class}`;
+    if (!classMap[key]) classMap[key] = { grade: s.grade, cls: s.class, students: [] };
+    classMap[key].students.push(s);
+  });
+  const classList = Object.values(classMap).sort((a,b)=>a.grade-b.grade||a.cls-b.cls);
+
+  // 나무 단계별 분포
+  const treeDist = [
+    { n:'🌱 새싹', min:0, max:200 },
+    { n:'🌿 새잎', min:200, max:600 },
+    { n:'🌾 작은나무', min:600, max:1300 },
+    { n:'🌲 큰나무', min:1300, max:2300 },
+    { n:'🌳 거목', min:2300, max:99999 },
+  ].map(t => ({ ...t, cnt: ss.filter(s=>(s.xp||0)>=t.min&&(s.xp||0)<t.max).length }));
+
+  const totalXP = ss.reduce((a,s)=>a+(s.xp||0),0);
+  const avgXP = Math.round(totalXP/ss.length);
+  const maxXP = Math.max(...ss.map(s=>s.xp||0));
+  const top5 = [...ss].sort((a,b)=>(b.xp||0)-(a.xp||0)).slice(0,5);
+  const treeDMax = Math.max(...treeDist.map(t=>t.cnt),1);
+
+  g('ct').innerHTML = `
+  <div class="pg on">
+    <div class="pg-hd">
+      <h2>📈 학생 통계</h2>
+      <p>전체 학생 XP·나무 성장 현황 분석</p>
+    </div>
+
+    <div class="g4 mb">
+      <div class="stat-c"><div class="ico">👩‍🎓</div><div class="val">${ss.length}</div><div class="lbl">전체 학생</div></div>
+      <div class="stat-c"><div class="ico">🌟</div><div class="val">${avgXP.toLocaleString()}</div><div class="lbl">평균 XP</div></div>
+      <div class="stat-c"><div class="ico">🏆</div><div class="val">${maxXP.toLocaleString()}</div><div class="lbl">최고 XP</div></div>
+      <div class="stat-c"><div class="ico">🌳</div><div class="val">${ss.filter(s=>(s.xp||0)>=2300).length}</div><div class="lbl">거목 달성</div></div>
+    </div>
+
+    <div class="g2 mb">
+      <!-- 학년별 통계 -->
+      <div class="card">
+        <div class="ch"><h3>📚 학년별 통계</h3></div>
+        <div class="cb" style="padding:0">
+          <table>
+            <thead><tr><th>학년</th><th>학생 수</th><th>재학생</th><th>평균 XP</th></tr></thead>
+            <tbody>
+              ${byGrade.filter(r=>r.cnt>0).map(r=>`
+                <tr>
+                  <td><strong>${r.gr}학년</strong></td>
+                  <td>${r.cnt}명</td>
+                  <td>${r.active}명</td>
+                  <td>
+                    <div class="xp-bar-wrap">
+                      <span style="font-weight:700;color:var(--gd);min-width:40px">${r.avg}</span>
+                      <div class="bar-bg"><div class="bar-fill" style="width:${avgXP?Math.min(100,Math.round(r.avg/maxXP*100)):0}%"></div></div>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 나무 단계 분포 -->
+      <div class="card">
+        <div class="ch"><h3>🌳 나무 단계 분포</h3></div>
+        <div class="cb">
+          ${treeDist.map(t=>`
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+              <span style="font-size:18px;width:28px;text-align:center">${t.n.split(' ')[0]}</span>
+              <span style="font-size:12px;color:var(--txl);width:70px">${t.n.split(' ').slice(1).join(' ')}</span>
+              <div style="flex:1;background:var(--gp);border-radius:5px;height:10px;overflow:hidden">
+                <div style="height:100%;background:linear-gradient(90deg,var(--g),var(--gl));border-radius:5px;width:${Math.round(t.cnt/treeDMax*100)}%;transition:width .6s"></div>
+              </div>
+              <span style="font-size:13px;font-weight:700;color:var(--gd);min-width:30px;text-align:right">${t.cnt}명</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- 반별 통계 -->
+    <div class="card mb">
+      <div class="ch">
+        <h3>🏫 반별 통계</h3>
+        <button class="btn btn-gold btn-sm" onclick="exportStudentExcel()">📊 엑셀 다운로드</button>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>학년</th><th>반</th><th>학생 수</th><th>평균 XP</th><th>최고 XP</th><th>총 XP</th><th>상위 학생</th></tr></thead>
+          <tbody>
+            ${classList.map(c => {
+              const avg2 = c.students.length ? Math.round(c.students.reduce((a,s)=>a+(s.xp||0),0)/c.students.length) : 0;
+              const max2 = c.students.length ? Math.max(...c.students.map(s=>s.xp||0)) : 0;
+              const total2 = c.students.reduce((a,s)=>a+(s.xp||0),0);
+              const best = [...c.students].sort((a,b)=>(b.xp||0)-(a.xp||0))[0];
+              return `<tr>
+                <td>${c.grade}학년</td>
+                <td><strong>${c.cls}반</strong></td>
+                <td>${c.students.length}명</td>
+                <td><strong style="color:var(--gd)">${avg2.toLocaleString()}</strong></td>
+                <td>${max2.toLocaleString()}</td>
+                <td>${total2.toLocaleString()}</td>
+                <td>${best ? `<strong>${best.name}</strong> (${(best.xp||0).toLocaleString()} XP)` : '-'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- XP Top 10 -->
+    <div class="card">
+      <div class="ch"><h3>🏆 XP 상위 10명</h3></div>
+      <div class="cb" style="padding:0">
+        <table>
+          <thead><tr><th>순위</th><th>이름</th><th>학년/반</th><th>나무</th><th>XP</th><th>상태</th></tr></thead>
+          <tbody>
+            ${[...ss].sort((a,b)=>(b.xp||0)-(a.xp||0)).slice(0,10).map((s,i)=>{
+              const t = treeStage(s.xp||0);
+              return `<tr>
+                <td><strong style="color:${i<3?'#e9c46a':'var(--g)'};font-size:${i<3?'16px':'13px'}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</strong></td>
+                <td><strong>${s.name}</strong></td>
+                <td>${s.grade}학년 ${s.class}반</td>
+                <td title="${t.n}">${t.e} <span style="font-size:11px;color:var(--txl)">${t.n}</span></td>
+                <td><strong style="color:var(--gd)">${(s.xp||0).toLocaleString()}</strong></td>
+                <td><span class="bdg ${s.status==='재학'?'bdg-g':s.status==='졸업'?'bdg-b':'bdg-o'}">${s.status||'재학'}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
 // ── 미션 관리 ──
 function renderMissions() {
   const ms=CACHE.missions;
+  const active=ms.filter(m=>m.is_active).length;
+  const daily=ms.filter(m=>m.type==='daily').length;
+  const weekly=ms.filter(m=>m.type==='weekly').length;
+  const special=ms.filter(m=>m.type==='special').length;
+
   g('ct').innerHTML=`
   <div class="pg on">
     <div class="pg-hd"><h2>🎯 미션 관리</h2><p>실천 미션을 추가, 수정, 삭제합니다</p></div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+
+    <div class="g4 mb">
+      <div class="stat-c"><div class="ico">📋</div><div class="val">${ms.length}</div><div class="lbl">전체 미션</div></div>
+      <div class="stat-c"><div class="ico">✅</div><div class="val">${active}</div><div class="lbl">활성 미션</div></div>
+      <div class="stat-c"><div class="ico">📅</div><div class="val">${daily}</div><div class="lbl">일일 미션</div></div>
+      <div class="stat-c"><div class="ico">🗓️</div><div class="val">${weekly}</div><div class="lbl">주간 미션</div></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ol btn-sm" id="mf-all" onclick="setMiFilter('all',this)" style="background:var(--gd);color:#fff;border-color:var(--gd)">전체 (${ms.length})</button>
+        <button class="btn btn-ol btn-sm" id="mf-daily" onclick="setMiFilter('daily',this)">일일 (${daily})</button>
+        <button class="btn btn-ol btn-sm" id="mf-weekly" onclick="setMiFilter('weekly',this)">주간 (${weekly})</button>
+        <button class="btn btn-ol btn-sm" id="mf-special" onclick="setMiFilter('special',this)">특별 (${special})</button>
+      </div>
       <button class="btn btn-g" onclick="openAddMission()">➕ 미션 추가</button>
     </div>
 
     <div class="g3" id="mi-grid">
     ${ms.map(m=>`
-      <div class="mi-card" id="mc-${m.id}">
+      <div class="mi-card" id="mc-${m.id}" style="${!m.is_active?'opacity:.65':''}">
         <div class="top">
           <div class="ico2">${m.icon||'🌱'}</div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
@@ -1030,6 +1277,22 @@ function renderMissions() {
     `).join('')||'<p style="color:var(--txl);padding:20px">등록된 미션이 없습니다</p>'}
     </div>
   </div>`;
+}
+
+let miFilter = 'all';
+function setMiFilter(f, el) {
+  miFilter = f;
+  document.querySelectorAll('[id^="mf-"]').forEach(b=>{ b.style.background=''; b.style.color=''; b.style.borderColor=''; });
+  el.style.background='var(--gd)'; el.style.color='#fff'; el.style.borderColor='var(--gd)';
+  const grid=g('mi-grid'); if(!grid) return;
+  grid.querySelectorAll('.mi-card').forEach(card=>{
+    if(f==='all') card.style.display='';
+    else {
+      const id=card.id.replace('mc-','');
+      const m=CACHE.missions.find(x=>String(x.id)===id);
+      card.style.display=(m&&m.type===f)?'':'none';
+    }
+  });
 }
 
 function openAddMission() {
