@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>광주경신여자고등학교 - 2026 행정자료 공유</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase 라이브러리 (다중 CDN 폴백) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"
+          onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
   <style>
     :root {
       --bg:#f0f4f0; --surface:#fff; --surface2:#e8f0e8; --border:#c8d8c8;
@@ -17,6 +19,10 @@
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+    /* 브라우저 안내 배너 */
+    .browser-tip{background:#fff8f0;border-bottom:1px solid #f4a261;padding:6px 32px;font-size:11px;color:#92400e;text-align:center}
+    .browser-tip-close{float:right;cursor:pointer;background:none;border:none;color:#92400e;font-size:14px;font-weight:700;padding:0 6px}
 
     header{background:var(--primary-dark);color:#fff;padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,0.18)}
     .header-left{display:flex;align-items:center;gap:14px}
@@ -177,6 +183,14 @@
     .empty-state-icon{font-size:36px;margin-bottom:8px}
     .empty-state-text{font-size:13px}
 
+    /* 라이브러리 로드 실패 안내 */
+    .lib-error-box{background:#fff;border-radius:16px;padding:40px;text-align:center;border:2px solid var(--danger);box-shadow:var(--shadow);max-width:600px;margin:0 auto}
+    .lib-error-icon{font-size:48px;margin-bottom:12px}
+    .lib-error-title{font-size:18px;font-weight:700;color:var(--danger);margin-bottom:12px}
+    .lib-error-desc{font-size:13px;color:var(--text-muted);line-height:1.8;text-align:left;background:#fafdfa;padding:16px 20px;border-radius:10px;border:1px solid var(--border)}
+    .lib-error-desc b{color:var(--text);display:block;margin-bottom:8px;font-size:14px}
+    .lib-error-desc ol{margin-left:20px;margin-top:6px}
+
     .toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--primary-dark);color:#fff;padding:12px 24px;border-radius:30px;font-size:13px;font-weight:500;transition:transform 0.3s,opacity 0.3s;opacity:0;z-index:999;white-space:nowrap}
     .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
@@ -192,10 +206,17 @@
       .list-table th.col-files{width:70px}
       .list-toolbar{padding:10px 14px}
       .list-table th,.list-table td{padding:10px 8px}
+      .browser-tip{padding:6px 12px;font-size:10px}
     }
   </style>
 </head>
 <body>
+
+<!-- 브라우저 안내 배너 -->
+<div class="browser-tip" id="browserTip">
+  💡 화면이 안 나오시면 주소창 왼쪽 🛡️ 아이콘 클릭 → 추적 방지 끄기, 또는 Chrome으로 접속해주세요.
+  <button class="browser-tip-close" onclick="document.getElementById('browserTip').style.display='none'">×</button>
+</div>
 
 <header>
   <div class="header-left">
@@ -273,4 +294,725 @@
       </select>
     </div>
     <div class="form-group">
-      <label
+      <label class="form-label">작성자 이름 *</label>
+      <input class="form-input" id="postAuthor" placeholder="예: 홍길동">
+    </div>
+    <div class="form-group">
+      <label class="form-label">제목 *</label>
+      <input class="form-input" id="postTitle" placeholder="제목을 입력하세요">
+    </div>
+    <div class="form-group">
+      <label class="form-label">내용</label>
+      <textarea class="form-textarea" id="postBody" placeholder="내용을 입력하세요..."></textarea>
+    </div>
+    <div class="form-group" id="pwGroup">
+      <label class="form-label">🔐 게시물 비밀번호 (4자리 숫자) *</label>
+      <input class="form-input pw-input" id="postPw" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="0000">
+      <div class="pw-hint">※ 본인만 알 수 있는 4자리 숫자. 수정·삭제 시 필요합니다.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">파일 첨부 (여러 개 선택 가능)</label>
+      <div class="file-upload-area" id="fileDropArea" onclick="document.getElementById('postFileInput').click()">
+        <div class="file-upload-icon">📁</div>
+        <div class="file-upload-text">클릭하여 파일 선택 또는 여기로 드래그</div>
+        <div class="file-upload-hint">HWP, PDF, DOCX, XLSX, 이미지 등 · 각 파일 최대 50MB</div>
+        <div class="file-upload-tip">💡 Ctrl 키 또는 Shift 키로 여러 파일 선택 가능!</div>
+      </div>
+      <input type="file" id="postFileInput" multiple style="display:none">
+      <div class="file-list" id="fileList"></div>
+      <div class="file-list-summary" id="fileListSummary" style="display:none"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closePostModal()">취소</button>
+      <button class="btn btn-primary" id="postSubmitBtn" onclick="submitPost()">게시하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW MODAL -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal">
+    <div id="viewContent"></div>
+    <div class="view-actions">
+      <button class="btn btn-edit" onclick="requestEdit()">✏️ 수정하기</button>
+      <button class="btn btn-danger" onclick="requestDelete()">🗑️ 삭제하기</button>
+      <button class="btn btn-cancel" style="margin-left:auto" onclick="closeViewModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 비밀번호 확인 MODAL -->
+<div class="modal-overlay" id="pwCheckModal">
+  <div class="confirm-modal">
+    <div class="confirm-icon">🔐</div>
+    <div class="confirm-title" id="pwCheckTitle">비밀번호 확인</div>
+    <div class="confirm-desc" id="pwCheckDesc">작성 시 설정한 4자리 비밀번호를 입력하세요.</div>
+    <input class="form-input pw-input" id="pwCheckInput" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="0000" style="margin-bottom:12px">
+    <div class="confirm-actions">
+      <button class="btn btn-cancel" onclick="closePwCheckModal()">취소</button>
+      <button class="btn btn-primary" id="pwCheckConfirmBtn">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="confirm-modal">
+    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-title">게시물을 삭제할까요?</div>
+    <div class="confirm-desc">삭제된 게시물과 첨부파일은<br>복구할 수 없습니다.</div>
+    <div class="confirm-actions">
+      <button class="btn btn-cancel" onclick="closeConfirmModal()">취소</button>
+      <button class="btn btn-danger" onclick="deletePost()">삭제하기</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ===== 설정 =====
+  const ADMIN_ID = 'kshin';
+  const ADMIN_PW = 'ks4810';
+  const SUPABASE_URL = 'https://jhbeuqsuswlsvazuoyia.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_rfPAENDyprHaECVMxa_aPA_kN5jvkRU';
+  const BUCKET = 'post-files';
+
+  // ===== 라이브러리 로드 실패 감지 =====
+  function showLibError() {
+    document.getElementById('boardContent').innerHTML = `
+      <div class="lib-error-box">
+        <div class="lib-error-icon">⚠️</div>
+        <div class="lib-error-title">데이터베이스 연결 실패</div>
+        <div class="lib-error-desc">
+          <b>📌 원인</b>
+          브라우저의 추적 방지 기능 때문에 Supabase 라이브러리가 차단되었습니다.
+          <br><br>
+          <b>✅ 해결 방법 (택 1)</b>
+          <ol>
+            <li>주소창 왼쪽 🛡️ 아이콘 클릭 → "추적 방지" 끄기</li>
+            <li>또는 <b>Chrome 브라우저</b>로 접속</li>
+            <li>이후 페이지 새로고침 (Ctrl + Shift + R)</li>
+          </ol>
+          <br>
+          <b>🏫 학교 IT 담당</b>
+          본 사이트는 광주경신여자고등학교 행정자료 공유 플랫폼입니다.
+        </div>
+      </div>`;
+  }
+
+  if(typeof supabase === 'undefined' || !supabase.createClient) {
+    // 라이브러리가 아직 로드 중일 수 있으니 1초 후 다시 체크
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if(typeof supabase === 'undefined' || !supabase.createClient) {
+          showLibError();
+        } else {
+          startApp();
+        }
+      }, 800);
+    });
+  } else {
+    window.addEventListener('DOMContentLoaded', startApp);
+  }
+
+  // ===== 메인 앱 시작 =====
+  let db = null;
+  const DEPTS = ['교무기획부','교육연구부','학생생활안전부','교육과정부','미래교육기획부','창의체험활동부','교육정보부'];
+  const DEPT_COLORS = {
+    '교무기획부':'#2d6a4f','교육연구부':'#40916c','학생생활안전부':'#52b788',
+    '교육과정부':'#f4a261','미래교육기획부':'#e76f51','창의체험활동부':'#457b9d','교육정보부':'#6a4c93'
+  };
+
+  let allPosts=[], currentDept='all', searchQuery='', viewingPostId=null;
+  let pendingFiles=[], existingFiles=[];
+  let isAdmin = false;
+  let pendingDeptForWrite = null;
+
+  function startApp() {
+    try {
+      const { createClient } = supabase;
+      db = createClient(SUPABASE_URL, SUPABASE_KEY);
+      init();
+    } catch(e) {
+      console.error('Supabase 초기화 실패:', e);
+      showLibError();
+    }
+  }
+
+  // ===== 관리자 로그인 =====
+  function handleWriteClick(deptHint) {
+    if(typeof deptHint === 'string') pendingDeptForWrite = deptHint;
+    else pendingDeptForWrite = null;
+    if(isAdmin) {
+      openPostModal(pendingDeptForWrite);
+    } else {
+      openAdminLoginModal();
+    }
+  }
+
+  function openAdminLoginModal() {
+    document.getElementById('adminLoginId').value = '';
+    document.getElementById('adminLoginPw').value = '';
+    document.getElementById('adminLoginError').textContent = '';
+    document.getElementById('adminLoginModal').classList.add('open');
+    setTimeout(() => document.getElementById('adminLoginId').focus(), 100);
+  }
+
+  function closeAdminLoginModal() {
+    document.getElementById('adminLoginModal').classList.remove('open');
+  }
+
+  function handleAdminLogin(e) {
+    e.preventDefault();
+    const id = document.getElementById('adminLoginId').value.trim();
+    const pw = document.getElementById('adminLoginPw').value;
+    const errEl = document.getElementById('adminLoginError');
+    if(id === ADMIN_ID && pw === ADMIN_PW) {
+      isAdmin = true;
+      errEl.textContent = '';
+      closeAdminLoginModal();
+      updateAdminUI();
+      showToast('✅ 관리자 로그인 완료');
+      openPostModal(pendingDeptForWrite);
+    } else {
+      errEl.textContent = '❌ 아이디 또는 비밀번호가 올바르지 않습니다.';
+      document.getElementById('adminLoginPw').value = '';
+    }
+  }
+
+  function handleLogout() {
+    if(!confirm('관리자 로그아웃하시겠습니까?')) return;
+    isAdmin = false;
+    updateAdminUI();
+    showToast('로그아웃되었습니다.');
+  }
+
+  function updateAdminUI() {
+    document.getElementById('userChip').style.display = isAdmin ? 'flex' : 'none';
+    document.getElementById('logoutBtn').style.display = isAdmin ? 'inline-flex' : 'none';
+  }
+
+  // ===== 초기화 =====
+  async function init() {
+    setupFileInput();
+    setupDragDrop();
+    setupPwCheckModal();
+    await loadPosts();
+    buildTabs();
+    updateAdminUI();
+  }
+
+  function setupFileInput() {
+    document.getElementById('postFileInput').addEventListener('change', function(e) {
+      addFiles(e.target.files);
+      e.target.value = '';
+    });
+  }
+
+  function setupDragDrop() {
+    const area = document.getElementById('fileDropArea');
+    area.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); area.classList.add('dragover'); });
+    area.addEventListener('dragleave', e => { e.preventDefault(); e.stopPropagation(); area.classList.remove('dragover'); });
+    area.addEventListener('drop', e => {
+      e.preventDefault(); e.stopPropagation(); area.classList.remove('dragover');
+      addFiles(e.dataTransfer.files);
+    });
+  }
+
+  function setupPwCheckModal() {
+    document.getElementById('pwCheckInput').addEventListener('keydown', e => {
+      if(e.key === 'Enter') { e.preventDefault(); document.getElementById('pwCheckConfirmBtn').click(); }
+    });
+  }
+
+  function addFiles(fileList) {
+    if(!fileList || fileList.length === 0) return;
+    const files = Array.from(fileList);
+    let added = 0;
+    for(const f of files) {
+      if(f.size > 50 * 1024 * 1024) { showToast(`"${f.name}" 50MB 초과로 제외`); continue; }
+      const dup = pendingFiles.some(x => x.name === f.name && x.size === f.size);
+      if(!dup) { pendingFiles.push(f); added++; }
+    }
+    if(added > 0) showToast(`${added}개 파일 추가됨`);
+    renderFileList();
+  }
+
+  function renderFileList() {
+    const list = document.getElementById('fileList');
+    const summary = document.getElementById('fileListSummary');
+    list.innerHTML = '';
+    existingFiles.forEach((f, idx) => {
+      const el = document.createElement('div');
+      el.className = 'file-list-item existing';
+      el.innerHTML = `<span class="file-list-icon">📎</span><span class="file-list-name">${esc(f.name)}</span><span class="file-list-size">${fmtSize(f.size)}</span><button class="file-list-remove" type="button" data-action="remove-existing" data-idx="${idx}">×</button>`;
+      list.appendChild(el);
+    });
+    pendingFiles.forEach((f, idx) => {
+      const el = document.createElement('div');
+      el.className = 'file-list-item';
+      el.innerHTML = `<span class="file-list-icon">📄</span><span class="file-list-name">${esc(f.name)}</span><span class="file-list-size">${fmtSize(f.size)}</span><button class="file-list-remove" type="button" data-action="remove-pending" data-idx="${idx}">×</button>`;
+      list.appendChild(el);
+    });
+    list.querySelectorAll('[data-action]').forEach(btn => {
+      btn.onclick = () => {
+        const action = btn.dataset.action, idx = parseInt(btn.dataset.idx);
+        if(action === 'remove-existing') existingFiles.splice(idx, 1);
+        else if(action === 'remove-pending') pendingFiles.splice(idx, 1);
+        renderFileList();
+      };
+    });
+    const total = existingFiles.length + pendingFiles.length;
+    if(total > 0) {
+      summary.style.display = 'block';
+      summary.textContent = `📦 총 ${total}개 파일 (기존 ${existingFiles.length} + 신규 ${pendingFiles.length})`;
+    } else {
+      summary.style.display = 'none';
+    }
+  }
+
+  // ===== 데이터 로드 (안전 가드 포함) =====
+  async function loadPosts() {
+    if(!db) { console.warn('DB 미초기화'); return; }
+    try {
+      const { data, error } = await db.from('posts').select('*').order('created_at', {ascending:false});
+      if(error) {
+        console.error('❌ Supabase 에러:', error);
+        showToast('DB 오류: ' + error.message);
+        allPosts = [];
+      } else {
+        allPosts = data || [];
+      }
+    } catch(e) {
+      console.error('❌ 네트워크 예외:', e);
+      showToast('네트워크 오류: ' + e.message);
+      allPosts = [];
+    }
+    renderAll();
+    updateTabCounts();
+  }
+
+  // ===== 렌더링 =====
+  function renderAll() {
+    if(currentDept === 'all') renderGridView();
+    else renderListView();
+  }
+
+  function renderGridView() {
+    const container = document.getElementById('boardContent');
+    container.innerHTML = '<div class="columns-grid" id="columnsGrid"></div>';
+    const grid = document.getElementById('columnsGrid');
+    const filtered = getFiltered();
+    DEPTS.forEach(dept => {
+      const posts = filtered.filter(p => p.dept === dept);
+      const col = document.createElement('div');
+      col.className = 'column-card';
+      col.innerHTML = `
+        <div class="col-header">
+          <div class="col-name"><span class="col-dot" style="background:${DEPT_COLORS[dept]||'#52b788'}"></span>${dept}</div>
+        </div>
+        <div class="col-body">
+          ${posts.length===0
+            ? `<div class="empty-state"><div class="empty-state-icon">📂</div><div class="empty-state-text">게시물 없음</div></div>`
+            : posts.map(p => postCardHTML(p)).join('')}
+        </div>
+        <button class="col-add-btn" onclick="handleWriteClick('${dept}')">＋ 게시물 추가</button>`;
+      grid.appendChild(col);
+    });
+    document.getElementById('totalCountLabel').textContent = `총 ${filtered.length}개 게시물`;
+  }
+
+  function renderListView() {
+    const container = document.getElementById('boardContent');
+    const filtered = getFiltered();
+    const dept = currentDept;
+    const color = DEPT_COLORS[dept] || '#52b788';
+
+    if(filtered.length === 0) {
+      container.innerHTML = `
+        <div class="list-view">
+          <div class="list-toolbar">
+            <div class="list-toolbar-title"><span class="col-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%"></span> ${dept} - 게시물 목록</div>
+            <button class="list-toolbar-add" onclick="handleWriteClick('${dept}')">＋ 게시물 추가</button>
+          </div>
+          <div class="list-empty">
+            <div style="font-size:36px;margin-bottom:8px">📂</div>
+            <div>아직 등록된 게시물이 없습니다.</div>
+          </div>
+        </div>`;
+      document.getElementById('totalCountLabel').textContent = `총 0개 게시물`;
+      return;
+    }
+
+    const numbered = filtered.map((p, idx) => ({...p, _num: filtered.length - idx}));
+
+    container.innerHTML = `
+      <div class="list-view">
+        <div class="list-toolbar">
+          <div class="list-toolbar-title"><span class="col-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%"></span> ${dept} - 게시물 목록 (${filtered.length}개)</div>
+          <button class="list-toolbar-add" onclick="handleWriteClick('${dept}')">＋ 게시물 추가</button>
+        </div>
+        <table class="list-table">
+          <thead>
+            <tr>
+              <th class="col-num">번호</th>
+              <th>제목</th>
+              <th class="col-files">첨부</th>
+              <th class="col-author col-author-cell">작성자</th>
+              <th class="col-lock">🔒</th>
+              <th class="col-date">작성일</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${numbered.map(p => listRowHTML(p, color)).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+    container.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.onclick = () => viewPost(tr.dataset.id);
+    });
+
+    document.getElementById('totalCountLabel').textContent = `총 ${filtered.length}개 게시물`;
+  }
+
+  function listRowHTML(p, color) {
+    const fileCount = (p.files || []).length;
+    const initial = (p.author || '?')[0];
+    const bodyPreview = (p.body || '').replace(/\n/g, ' ').slice(0, 80);
+    return `<tr data-id="${p.id}">
+      <td class="list-num">${p._num}</td>
+      <td>
+        <div class="list-title-row">
+          <span class="list-title">${esc(p.title)}</span>
+        </div>
+        ${bodyPreview ? `<div class="list-body-preview">${esc(bodyPreview)}</div>` : ''}
+      </td>
+      <td class="list-files">${fileCount > 0 ? `📎 ${fileCount}개` : '<span class="list-files-empty">-</span>'}</td>
+      <td class="col-author-cell">
+        <div class="list-author">
+          <div class="list-author-avatar" style="background:${color}">${initial}</div>
+          ${esc(p.author)}
+        </div>
+      </td>
+      <td class="list-lock">${p.pw ? '🔒' : ''}</td>
+      <td class="list-date">${fmtTime(p.created_at)}</td>
+    </tr>`;
+  }
+
+  function postCardHTML(p) {
+    const color = DEPT_COLORS[p.dept] || '#52b788';
+    const fileCount = (p.files || []).length;
+    return `<div class="post-card" onclick="viewPost('${p.id}')">
+      <div class="post-card-author">
+        <div class="post-avatar" style="background:${color}">${(p.author||'?')[0]}</div>
+        <span class="post-author-name">${esc(p.author)}</span>
+        <span class="post-time">${fmtTime(p.created_at)}</span>
+      </div>
+      <div class="post-title">${esc(p.title)}</div>
+      ${p.body ? `<div class="post-body">${esc(p.body)}</div>` : ''}
+      <div>
+        ${fileCount > 0 ? `<span class="post-file-badge">📎 파일 ${fileCount}개</span>` : ''}
+        ${p.pw ? `<span class="post-lock-badge">🔒</span>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function getFiltered() {
+    let posts = allPosts;
+    if(currentDept !== 'all') posts = posts.filter(p => p.dept === currentDept);
+    if(searchQuery) {
+      const q = searchQuery.toLowerCase();
+      posts = posts.filter(p =>
+        (p.title||'').toLowerCase().includes(q) ||
+        (p.body||'').toLowerCase().includes(q) ||
+        (p.author||'').toLowerCase().includes(q));
+    }
+    return posts;
+  }
+
+  function buildTabs() {
+    const bar = document.getElementById('tabsBar');
+    bar.querySelectorAll('[data-dept]:not([data-dept="all"])').forEach(e => e.remove());
+    DEPTS.forEach(dept => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn';
+      btn.dataset.dept = dept;
+      btn.innerHTML = `${dept} <span class="tab-count" id="count-${dept}">0</span>`;
+      btn.onclick = () => filterDept(dept, btn);
+      bar.appendChild(btn);
+    });
+    updateTabCounts();
+  }
+
+  function updateTabCounts() {
+    const el = document.getElementById('count-all');
+    if(el) el.textContent = allPosts.length;
+    DEPTS.forEach(dept => {
+      const e = document.getElementById(`count-${dept}`);
+      if(e) e.textContent = allPosts.filter(p => p.dept === dept).length;
+    });
+  }
+
+  function filterDept(dept, btn) {
+    currentDept = dept;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('currentDeptLabel').textContent = dept === 'all' ? '전체 부서' : dept;
+    renderAll();
+  }
+
+  function filterPosts() {
+    searchQuery = document.getElementById('searchInput').value.trim();
+    renderAll();
+  }
+
+  // ===== 게시물 보기 =====
+  function viewPost(id) {
+    const p = allPosts.find(x => x.id === id);
+    if(!p) return;
+    viewingPostId = id;
+    const color = DEPT_COLORS[p.dept] || '#52b788';
+    const files = p.files || [];
+    const filesHTML = files.length > 0 ? `
+      <div class="view-files">
+        <div class="view-files-title">📎 첨부파일 (${files.length}개)</div>
+        <div class="view-files-list">
+          ${files.map(f => `
+            <a class="view-file-link" href="${f.url}" target="_blank" download="${esc(f.name)}">
+              <span>📄</span>
+              <span class="view-file-link-name">${esc(f.name)}</span>
+              <span class="view-file-link-size">${fmtSize(f.size)}</span>
+              <span style="font-size:14px">⬇️</span>
+            </a>`).join('')}
+        </div>
+      </div>` : '';
+    document.getElementById('viewContent').innerHTML = `
+      <div class="view-meta">
+        <span class="view-dept-tag" style="background:${color}">${p.dept}</span>
+        <span class="view-author">${esc(p.author)}</span>
+        <span class="view-time">${fmtTime(p.created_at)}</span>
+      </div>
+      <div class="view-title">${esc(p.title)}</div>
+      <div class="view-body">${esc(p.body||'')}</div>
+      ${filesHTML}`;
+    document.getElementById('viewModal').classList.add('open');
+  }
+
+  function closeViewModal() {
+    document.getElementById('viewModal').classList.remove('open');
+    viewingPostId = null;
+  }
+
+  // ===== 비밀번호 검증 =====
+  function openPwCheckModal(title, desc, onSuccess) {
+    document.getElementById('pwCheckTitle').textContent = title;
+    document.getElementById('pwCheckDesc').textContent = desc;
+    document.getElementById('pwCheckInput').value = '';
+    const btn = document.getElementById('pwCheckConfirmBtn');
+    btn.onclick = () => {
+      const entered = document.getElementById('pwCheckInput').value.trim();
+      const post = allPosts.find(x => x.id === viewingPostId);
+      if(!post) { showToast('게시물을 찾을 수 없습니다.'); return; }
+      if(!post.pw) { closePwCheckModal(); onSuccess(); return; }
+      if(entered === post.pw) { closePwCheckModal(); onSuccess(); }
+      else {
+        showToast('❌ 비밀번호가 일치하지 않습니다.');
+        document.getElementById('pwCheckInput').value = '';
+        document.getElementById('pwCheckInput').focus();
+      }
+    };
+    document.getElementById('pwCheckModal').classList.add('open');
+    setTimeout(() => document.getElementById('pwCheckInput').focus(), 100);
+  }
+
+  function closePwCheckModal() { document.getElementById('pwCheckModal').classList.remove('open'); }
+
+  function requestEdit() {
+    openPwCheckModal('🔐 수정 권한 확인', '게시물 작성 시 설정한 4자리 비밀번호를 입력하세요.', () => {
+      const p = allPosts.find(x => x.id === viewingPostId);
+      if(!p) return;
+      closeViewModal();
+      openPostModal(null, p);
+    });
+  }
+
+  function requestDelete() {
+    openPwCheckModal('🔐 삭제 권한 확인', '게시물 작성 시 설정한 4자리 비밀번호를 입력하세요.', () => {
+      document.getElementById('confirmModal').classList.add('open');
+    });
+  }
+
+  // ===== 작성/수정 모달 =====
+  function openPostModal(dept, editPost) {
+    resetForm();
+    if(editPost) {
+      document.getElementById('postModalTitle').textContent = '✏️ 게시물 수정';
+      document.getElementById('postSubmitBtn').textContent = '저장하기';
+      document.getElementById('editPostId').value = editPost.id;
+      document.getElementById('postDept').value = editPost.dept;
+      document.getElementById('postAuthor').value = editPost.author;
+      document.getElementById('postTitle').value = editPost.title;
+      document.getElementById('postBody').value = editPost.body || '';
+      document.getElementById('pwGroup').style.display = 'none';
+      existingFiles = (editPost.files || []).map(f => ({...f}));
+    } else {
+      document.getElementById('postModalTitle').textContent = '📋 새 게시물 작성';
+      document.getElementById('postSubmitBtn').textContent = '게시하기';
+      document.getElementById('pwGroup').style.display = 'block';
+      if(dept) document.getElementById('postDept').value = dept;
+    }
+    renderFileList();
+    document.getElementById('postModal').classList.add('open');
+  }
+
+  function closePostModal() { document.getElementById('postModal').classList.remove('open'); resetForm(); }
+
+  function resetForm() {
+    ['editPostId','postAuthor','postTitle','postBody','postPw'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+    document.getElementById('postDept').value = '';
+    document.getElementById('postFileInput').value = '';
+    document.getElementById('pwGroup').style.display = 'block';
+    pendingFiles = []; existingFiles = [];
+    renderFileList();
+  }
+
+  // ===== 파일 업로드 =====
+  async function uploadOne(file, idx) {
+    const ext = file.name.split('.').pop();
+    const safeName = `${Date.now()}_${idx}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const { error } = await db.storage.from(BUCKET).upload(safeName, file, { cacheControl: '3600', upsert: false });
+    if(error) throw error;
+    const { data: urlData } = db.storage.from(BUCKET).getPublicUrl(safeName);
+    return { url: urlData.publicUrl, name: file.name, size: file.size, path: safeName };
+  }
+
+  async function uploadAllPending(submitBtn) {
+    const uploaded = [], failed = [];
+    for(let i = 0; i < pendingFiles.length; i++) {
+      submitBtn.textContent = `업로드 중... (${i+1}/${pendingFiles.length})`;
+      try { uploaded.push(await uploadOne(pendingFiles[i], i)); }
+      catch(e) { console.error(e); failed.push(pendingFiles[i].name); }
+    }
+    if(failed.length > 0) showToast(`⚠️ ${failed.length}개 업로드 실패`);
+    return uploaded;
+  }
+
+  async function submitPost() {
+    const editId = document.getElementById('editPostId').value;
+    const dept = document.getElementById('postDept').value.trim();
+    const author = document.getElementById('postAuthor').value.trim();
+    const title = document.getElementById('postTitle').value.trim();
+    const body = document.getElementById('postBody').value.trim();
+    const pw = document.getElementById('postPw').value.trim();
+
+    if(!dept || !author || !title) { showToast('부서, 작성자, 제목은 필수입니다.'); return; }
+    if(!editId && !/^\d{4}$/.test(pw)) {
+      showToast('비밀번호는 4자리 숫자로 입력해주세요.');
+      document.getElementById('postPw').focus();
+      return;
+    }
+
+    const btn = document.getElementById('postSubmitBtn');
+    btn.disabled = true; btn.textContent = '처리 중...';
+
+    try {
+      const newlyUploaded = await uploadAllPending(btn);
+      const finalFiles = [...existingFiles, ...newlyUploaded];
+
+      if(editId) {
+        const original = allPosts.find(p => p.id === editId);
+        const keptPaths = new Set(existingFiles.map(f => f.path).filter(Boolean));
+        const toDelete = (original?.files || []).filter(f => f.path && !keptPaths.has(f.path)).map(f => f.path);
+        if(toDelete.length > 0) {
+          try { await db.storage.from(BUCKET).remove(toDelete); }
+          catch(e) { console.warn(e); }
+        }
+        const { data, error } = await db.from('posts')
+          .update({dept, author, title, body, files: finalFiles, updated_at: new Date().toISOString()})
+          .eq('id', editId).select();
+        if(error) throw error;
+        allPosts = allPosts.map(p => p.id === editId ? data[0] : p);
+        showToast('✅ 게시물이 수정되었습니다!');
+      } else {
+        const { data, error } = await db.from('posts')
+          .insert([{dept, author, title, body, files: finalFiles, pw}])
+          .select();
+        if(error) throw error;
+        allPosts = [data[0], ...allPosts];
+        showToast(`✅ 게시물 등록 완료! ${finalFiles.length > 0 ? `(파일 ${finalFiles.length}개)` : ''}`);
+      }
+      closePostModal();
+      renderAll();
+      updateTabCounts();
+    } catch(e) {
+      console.error(e);
+      showToast('오류: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = document.getElementById('editPostId').value ? '저장하기' : '게시하기';
+    }
+  }
+
+  // ===== 삭제 =====
+  function closeConfirmModal() { document.getElementById('confirmModal').classList.remove('open'); }
+
+  async function deletePost() {
+    if(!viewingPostId) return;
+    const p = allPosts.find(x => x.id === viewingPostId);
+    if(p && p.files && p.files.length > 0) {
+      try {
+        const paths = p.files.map(f => f.path).filter(Boolean);
+        if(paths.length > 0) await db.storage.from(BUCKET).remove(paths);
+      } catch(e) { console.warn(e); }
+    }
+    const { error } = await db.from('posts').delete().eq('id', viewingPostId);
+    if(error) { showToast('삭제 오류: ' + error.message); return; }
+    allPosts = allPosts.filter(x => x.id !== viewingPostId);
+    closeConfirmModal(); closeViewModal(); renderAll(); updateTabCounts();
+    showToast('🗑️ 게시물이 삭제되었습니다.');
+  }
+
+  // ===== 유틸 =====
+  function fmtTime(iso) {
+    if(!iso) return '';
+    const diff = (Date.now() - new Date(iso)) / 1000;
+    if(diff < 60) return '방금 전';
+    if(diff < 3600) return Math.floor(diff/60) + '분 전';
+    if(diff < 86400) return Math.floor(diff/3600) + '시간 전';
+    const d = new Date(iso);
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function fmtSize(bytes) {
+    if(!bytes) return '';
+    if(bytes < 1024) return bytes + 'B';
+    if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + 'KB';
+    return (bytes/(1024*1024)).toFixed(1) + 'MB';
+  }
+  function esc(str) {
+    return (str||'').toString()
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._tid);
+    showToast._tid = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  document.addEventListener('click', function(e) {
+    if(e.target.id === 'postModal') closePostModal();
+    if(e.target.id === 'viewModal') closeViewModal();
+    if(e.target.id === 'confirmModal') closeConfirmModal();
+    if(e.target.id === 'pwCheckModal') closePwCheckModal();
+    if(e.target.id === 'adminLoginModal') closeAdminLoginModal();
+  });
+</script>
+</body>
+</html>
