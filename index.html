@@ -85,7 +85,6 @@
     .form-textarea{resize:vertical;min-height:100px}
     .modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
 
-    /* FILE UPLOAD */
     .file-upload-area{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all 0.18s;position:relative;background:var(--surface)}
     .file-upload-area:hover,.file-upload-area.dragover{border-color:var(--primary-light);background:var(--surface2)}
     .file-upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
@@ -101,7 +100,6 @@
     .upload-progress-text{font-size:11px;color:var(--text-muted);margin-top:4px;text-align:center}
     .existing-file-info{margin-top:8px;font-size:12px;color:var(--text-muted);padding:8px 12px;background:#fff8f0;border-radius:8px;border:1px solid #f4a261}
 
-    /* VIEW MODAL */
     .view-meta{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
     .view-dept-tag{color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
     .view-author{font-size:12px;color:var(--text-muted)}
@@ -112,7 +110,6 @@
     .view-file-link:hover{background:#d8eedb}
     .view-actions{display:flex;gap:8px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap}
 
-    /* CONFIRM */
     .confirm-modal{background:var(--surface);border-radius:var(--radius);padding:32px;width:min(360px,90vw);box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:modalIn 0.22s ease;text-align:center}
     .confirm-icon{font-size:44px;margin-bottom:12px}
     .confirm-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px}
@@ -262,7 +259,9 @@
 
 <script>
   const { createClient } = supabase;
-  const SUPABASE_URL = 'https://rfpaendyprhaecvmxaapa.supabase.co';
+
+  // ✅ 수정됨: 정확한 Supabase 프로젝트 URL
+  const SUPABASE_URL = 'https://jhbeuqsuswlsvazuoyia.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_rfPAENDyprHaECVMxa_aPA_kN5jvkRU';
   const db = createClient(SUPABASE_URL, SUPABASE_KEY);
   const BUCKET = 'post-files';
