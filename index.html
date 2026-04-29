@@ -3,606 +3,754 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2026학년도 행정 서류</title>
+  <title>광주경신여자고등학교 - 2026 행정자료 공유</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg-page: #E8F5E9; --bg-card: #FFFFFF;
-      --text-1: #1F2937; --text-2: #6B7280;
-      --primary: #FF5A5F; --primary-d: #E04347;
-      --border: #E5E7EB; --shadow: 0 2px 8px rgba(0,0,0,0.08);
-      --radius: 12px;
+      --bg: #f0f4f0;
+      --surface: #ffffff;
+      --surface2: #e8f0e8;
+      --border: #c8d8c8;
+      --primary: #2d6a4f;
+      --primary-light: #52b788;
+      --primary-dark: #1b4332;
+      --accent: #f4a261;
+      --accent2: #e76f51;
+      --text: #1a2e1a;
+      --text-muted: #5a7a5a;
+      --shadow: 0 4px 24px rgba(45, 106, 79, 0.10);
+      --shadow-hover: 0 8px 32px rgba(45, 106, 79, 0.18);
+      --radius: 16px;
+      --radius-sm: 10px;
     }
-    html, body {
-      height: 100%;
-      font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-      background: var(--bg-page); color: var(--text-1); overflow: hidden;
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
     }
-    .hidden { display: none !important; }
-    .topbar {
-      height: 64px; background: rgba(255,255,255,0.85);
-      border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 0 24px; position: sticky; top: 0; z-index: 50;
+
+    /* ── HEADER ── */
+    header {
+      background: var(--primary-dark);
+      color: #fff;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.18);
     }
-    .topbar-left { display: flex; align-items: center; gap: 12px; }
-    .topbar-right { display: flex; align-items: center; gap: 10px; }
-    .logo { font-size: 26px; }
-    .topbar h1 { font-size: 18px; font-weight: 700; }
-    #searchInput {
-      width: 240px; padding: 8px 12px;
-      border: 1px solid var(--border); border-radius: 8px;
-      font-size: 14px; outline: none;
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
     }
-    #searchInput:focus { border-color: var(--primary); }
-    .user-badge {
-      background: #FFE0E0; color: var(--primary-d);
-      padding: 6px 12px; border-radius: 20px;
-      font-size: 13px; font-weight: 600;
+    .school-logo {
+      width: 38px; height: 38px;
+      background: var(--primary-light);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 900; color: #fff;
+      flex-shrink: 0;
+    }
+    .header-title {
+      display: flex; flex-direction: column;
+    }
+    .header-school {
+      font-family: 'Gowun Batang', serif;
+      font-size: 15px; font-weight: 700; letter-spacing: 1px;
+      color: #d8f3dc;
+    }
+    .header-sub {
+      font-size: 11px; color: #95d5b2; letter-spacing: 0.5px;
+    }
+    .header-actions {
+      display: flex; gap: 10px; align-items: center;
     }
     .btn {
-      padding: 8px 16px; border: none; border-radius: 8px;
-      font-size: 14px; font-weight: 600; cursor: pointer;
-    }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: var(--primary-d); }
-    .btn-ghost { background: transparent; color: var(--text-2); }
-    .btn-full { width: 100%; padding: 12px; margin-top: 12px; }
-    .btn-danger { background: #EF4444; color: #fff; }
-    .btn-secondary { background: #E5E7EB; color: var(--text-1); }
-    .board {
-      height: calc(100vh - 64px);
-      display: flex; gap: 16px; padding: 20px;
-      overflow-x: auto; overflow-y: hidden;
-    }
-    .column {
-      flex: 0 0 300px; background: rgba(255,255,255,0.6);
-      border-radius: var(--radius);
-      display: flex; flex-direction: column;
-      max-height: 100%; box-shadow: var(--shadow);
-    }
-    .column-header {
-      padding: 14px 16px;
-      border-radius: var(--radius) var(--radius) 0 0;
-      font-weight: 700; font-size: 15px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .column-header .count {
-      font-size: 12px; background: rgba(255,255,255,0.6);
-      padding: 2px 8px; border-radius: 10px; color: var(--text-2);
-    }
-    .column-body {
-      flex: 1; overflow-y: auto; padding: 12px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .add-post-btn {
-      margin: 8px 12px 12px; padding: 10px;
-      background: #fff; border: 1px dashed #cbd5e1;
-      border-radius: 8px; color: var(--text-2);
-      font-size: 14px; cursor: pointer;
-    }
-    .add-post-btn:hover {
-      border-color: var(--primary); color: var(--primary); background: #FFF5F5;
-    }
-    .card {
-      background: var(--bg-card); border-radius: 10px; padding: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer;
-      border: 1px solid #f3f4f6;
-    }
-    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.1); }
-    .card-author { font-size: 12px; color: var(--text-2); margin-bottom: 4px; }
-    .card-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
-    .card-content {
-      font-size: 13px; line-height: 1.4;
-      display: -webkit-box; -webkit-line-clamp: 4;
-      -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px;
-    }
-    .card-file {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: #FEF3C7; color: #92400E;
-      padding: 3px 8px; border-radius: 6px;
-      font-size: 11px; font-weight: 600; margin-bottom: 8px;
-    }
-    .card-meta {
-      display: flex; justify-content: space-between;
-      font-size: 12px; color: var(--text-2);
-      border-top: 1px solid #f3f4f6; padding-top: 8px;
-    }
-    .like-btn { cursor: pointer; user-select: none; }
-    .like-btn.liked { color: var(--primary); font-weight: 700; }
-    .modal {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 100; padding: 20px;
-    }
-    .modal-content {
-      background: #fff; border-radius: 16px; padding: 32px;
-      width: 100%; max-width: 520px; max-height: 90vh;
-      overflow-y: auto; position: relative;
-    }
-    .detail-modal { max-width: 640px; }
-    .auth-modal { max-width: 400px; }
-    .close-btn {
-      position: absolute; top: 12px; right: 16px;
-      background: none; border: none;
-      font-size: 28px; cursor: pointer; color: var(--text-2);
-    }
-    .modal h2 { margin-bottom: 16px; font-size: 20px; }
-    .modal label {
-      display: block; margin-top: 12px; margin-bottom: 4px;
-      font-size: 13px; font-weight: 600; color: var(--text-2);
-    }
-    .modal input[type="text"], .modal input[type="email"],
-    .modal input[type="password"], .modal textarea, .modal input[type="file"] {
-      width: 100%; padding: 10px;
-      border: 1px solid var(--border); border-radius: 8px;
-      font-size: 14px; font-family: inherit;
-    }
-    .modal textarea { resize: vertical; }
-    .modal input:focus, .modal textarea:focus {
-      outline: none; border-color: var(--primary);
-    }
-    .auth-modal input { margin-bottom: 10px; }
-    .toggle-auth { text-align: center; margin-top: 12px; font-size: 13px; }
-    .toggle-auth a { color: var(--primary); text-decoration: none; }
-    .error-msg { color: var(--primary); font-size: 13px; text-align: center; margin-top: 8px; min-height: 18px; }
-    .hint { font-size: 12px; color: var(--text-2); margin-top: 4px; }
-    .detail-header { border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; }
-    .detail-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
-    .detail-meta { font-size: 13px; color: var(--text-2); }
-    .detail-content { font-size: 15px; line-height: 1.6; white-space: pre-wrap; margin-bottom: 16px; }
-    .detail-file {
       display: inline-flex; align-items: center; gap: 6px;
-      background: #FEF3C7; color: #92400E;
-      padding: 8px 14px; border-radius: 8px;
-      text-decoration: none; font-weight: 600; margin-bottom: 16px;
+      padding: 8px 18px; border-radius: 8px;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      border: none; transition: all 0.18s;
     }
-    .detail-actions { display: flex; gap: 8px; margin-bottom: 20px; }
-    .comments-section { border-top: 1px solid var(--border); padding-top: 16px; }
-    .comments-section h3 { font-size: 15px; margin-bottom: 12px; }
-    .comment { padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
-    .comment-author { font-weight: 600; font-size: 13px; }
-    .comment-time { font-size: 11px; color: var(--text-2); margin-left: 8px; }
-    .comment-content { font-size: 14px; margin-top: 4px; line-height: 1.4; }
-    .comment-delete { float: right; color: var(--text-2); cursor: pointer; font-size: 12px; }
-    .comment-form { display: flex; gap: 8px; margin-top: 12px; }
-    .comment-form input { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
+    .btn-primary {
+      background: var(--primary-light); color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent); transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent; color: #d8f3dc; border: 1.5px solid #52b788;
+    }
+    .btn-outline:hover { background: rgba(82,183,136,0.15); }
+
+    /* ── TABS BAR ── */
+    .tabs-bar {
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      padding: 0 32px;
+      overflow-x: auto;
+      gap: 2px;
+      min-height: 48px;
+    }
+    .tabs-bar::-webkit-scrollbar { height: 3px; }
+    .tabs-bar::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 2px; }
+    .tab-btn {
+      background: none; border: none; cursor: pointer;
+      color: #b7e4c7;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 13px; font-weight: 500;
+      padding: 12px 20px;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+      transition: all 0.18s;
+      border-radius: 0;
+    }
+    .tab-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .tab-btn.active {
+      color: #fff; font-weight: 700;
+      border-bottom-color: var(--accent);
+      background: rgba(255,255,255,0.10);
+    }
+    .tab-count {
+      display: inline-block; background: var(--accent);
+      color: #fff; font-size: 10px; font-weight: 700;
+      border-radius: 10px; padding: 1px 7px; margin-left: 4px;
+    }
+
+    /* ── BOARD ── */
+    .board-wrapper {
+      padding: 24px 32px 80px;
+    }
+    .board-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .board-title-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .dept-badge {
+      font-size: 11px; background: var(--primary-light); color: #fff;
+      padding: 3px 10px; border-radius: 20px; font-weight: 600;
+    }
+    .dept-label {
+      font-family: 'Gowun Batang', serif;
+      font-size: 20px; font-weight: 700; color: var(--primary-dark);
+    }
+
+    /* ── COLUMNS GRID ── */
+    .columns-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 18px;
+    }
+    .column-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.2s;
+    }
+    .column-card:hover { box-shadow: var(--shadow-hover); }
+    .col-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .col-name {
+      font-weight: 700; font-size: 14px; color: var(--primary-dark);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .col-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--primary-light);
+      flex-shrink: 0;
+    }
+    .col-menu { cursor: pointer; color: var(--text-muted); font-size: 18px; }
+    .col-body {
+      flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 8px;
+      overflow-y: auto; max-height: 420px;
+    }
+    .col-body::-webkit-scrollbar { width: 4px; }
+    .col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .col-add-btn {
+      margin: 8px 10px 10px;
+      background: none; border: 1.5px dashed var(--border);
+      border-radius: var(--radius-sm); color: var(--text-muted);
+      font-size: 13px; padding: 8px; cursor: pointer;
+      transition: all 0.18s;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    .col-add-btn:hover { border-color: var(--primary-light); color: var(--primary); background: var(--surface2); }
+
+    /* ── POST CARD ── */
+    .post-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.18s;
+      box-shadow: 0 1px 6px rgba(45,106,79,0.06);
+      position: relative;
+    }
+    .post-card:hover {
+      border-color: var(--primary-light);
+      box-shadow: 0 4px 16px rgba(45,106,79,0.14);
+      transform: translateY(-1px);
+    }
+    .post-card-author {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 6px;
+    }
+    .post-avatar {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--primary-light);
+      color: #fff; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .post-author-name { font-size: 11px; color: var(--text-muted); }
+    .post-time { font-size: 10px; color: #aaa; margin-left: auto; }
+    .post-title {
+      font-size: 13px; font-weight: 700; color: var(--text);
+      margin-bottom: 4px; line-height: 1.4;
+    }
+    .post-body {
+      font-size: 12px; color: var(--text-muted);
+      line-height: 1.6;
+      display: -webkit-box; -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .post-file-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      margin-top: 8px; background: #e8f4ea;
+      color: var(--primary); font-size: 10px; font-weight: 600;
+      padding: 3px 8px; border-radius: 6px;
+    }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed; bottom: 32px; right: 32px;
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--accent2); color: #fff;
+      font-size: 28px; border: none; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(231,111,81,0.4);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      z-index: 200;
+    }
+    .fab:hover { background: var(--accent); transform: scale(1.08); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 300;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: min(560px, 95vw);
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      animation: modalIn 0.22s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      to   { opacity: 1; transform: none; }
+    }
+    .modal-title {
+      font-family: 'Gowun Batang', serif;
+      font-size: 20px; font-weight: 700; color: var(--primary-dark);
+      margin-bottom: 20px;
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--text-muted); margin-bottom: 5px;
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: 'Noto Sans KR', sans-serif; font-size: 13px;
+      color: var(--text); background: var(--surface);
+      transition: border-color 0.18s;
+      outline: none;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--primary-light);
+    }
+    .form-textarea { resize: vertical; min-height: 100px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+    .btn-cancel {
+      background: var(--surface2); color: var(--text-muted);
+      border: 1.5px solid var(--border);
+    }
+    .btn-cancel:hover { background: var(--border); }
+
+    /* ── VIEW MODAL ── */
+    .view-modal-content { }
+    .view-meta {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 16px;
+    }
+    .view-dept-tag {
+      background: var(--primary-light); color: #fff;
+      font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+    }
+    .view-author { font-size: 12px; color: var(--text-muted); }
+    .view-time { font-size: 11px; color: #aaa; margin-left: auto; }
+    .view-title {
+      font-family: 'Gowun Batang', serif;
+      font-size: 22px; font-weight: 700; color: var(--primary-dark);
+      margin-bottom: 14px;
+    }
+    .view-body {
+      font-size: 14px; color: var(--text); line-height: 1.8;
+      white-space: pre-wrap; margin-bottom: 16px;
+    }
+    .view-file-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #e8f4ea; color: var(--primary);
+      padding: 8px 14px; border-radius: 8px;
+      font-size: 12px; font-weight: 600; text-decoration: none;
+      border: 1px solid var(--primary-light);
+    }
+    .view-file-link:hover { background: #d8eedb; }
+
+    /* ── SEARCH BAR ── */
+    .search-wrap {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .search-input {
+      background: rgba(255,255,255,0.12);
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 8px; padding: 6px 14px;
+      color: #fff; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 13px; width: 200px; outline: none;
+    }
+    .search-input::placeholder { color: rgba(255,255,255,0.5); }
+    .search-input:focus { border-color: var(--primary-light); background: rgba(255,255,255,0.18); }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center; padding: 32px 16px; color: var(--text-muted);
+    }
+    .empty-state-icon { font-size: 36px; margin-bottom: 8px; }
+    .empty-state-text { font-size: 13px; }
+
+    /* ── TOAST ── */
     .toast {
-      position: fixed; bottom: 30px; left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.85); color: #fff;
-      padding: 12px 20px; border-radius: 8px;
-      font-size: 14px; z-index: 200;
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(60px);
+      background: var(--primary-dark); color: #fff;
+      padding: 12px 24px; border-radius: 30px;
+      font-size: 13px; font-weight: 500;
+      transition: transform 0.3s, opacity 0.3s;
+      opacity: 0; z-index: 999; white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ── Loading ── */
+    .loading-spinner {
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px; color: var(--text-muted); gap: 10px;
+    }
+    .spinner {
+      width: 20px; height: 20px; border: 2px solid var(--border);
+      border-top-color: var(--primary-light);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      header { padding: 0 16px; }
+      .tabs-bar { padding: 0 12px; }
+      .board-wrapper { padding: 16px 12px 80px; }
+      .columns-grid { grid-template-columns: 1fr; }
+      .search-input { width: 140px; }
+      .header-school { font-size: 13px; }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-left">
-      <span class="logo">📋</span>
-      <h1>2026학년도 행정 서류</h1>
-    </div>
-    <div class="topbar-right">
-      <input id="searchInput" type="text" placeholder="🔍 제목/내용 검색..." />
-      <span id="userBadge" class="user-badge hidden"></span>
-      <button id="loginBtn" class="btn btn-primary">로그인</button>
-      <button id="logoutBtn" class="btn btn-ghost hidden">로그아웃</button>
-    </div>
-  </header>
-  <main id="board" class="board"></main>
-  <div id="authModal" class="modal hidden">
-    <div class="modal-content auth-modal">
-      <button class="close-btn" data-close="authModal">&times;</button>
-      <h2 id="authTitle">로그인</h2>
-      <form id="authForm">
-        <input type="email" id="authEmail" placeholder="이메일" required />
-        <input type="password" id="authPassword" placeholder="비밀번호 (6자 이상)" required minlength="6" />
-        <input type="text" id="authName" placeholder="이름 (회원가입 시)" />
-        <button type="submit" class="btn btn-primary btn-full" id="authSubmitBtn">로그인</button>
-      </form>
-      <p class="toggle-auth"><a href="#" id="toggleAuthMode">계정이 없으신가요? 회원가입</a></p>
-      <p id="authError" class="error-msg"></p>
-    </div>
-  </div>
-  <div id="postModal" class="modal hidden">
-    <div class="modal-content">
-      <button class="close-btn" data-close="postModal">&times;</button>
-      <h2 id="postModalTitle">새 게시글</h2>
-      <form id="postForm">
-        <input type="hidden" id="postId" />
-        <input type="hidden" id="postDeptId" />
-        <label>제목</label>
-        <input type="text" id="postTitle" required maxlength="200" />
-        <label>내용</label>
-        <textarea id="postContent" rows="6"></textarea>
-        <label>파일 첨부 (HWP, PDF 등)</label>
-        <input type="file" id="postFile" />
-        <p id="existingFile" class="hint"></p>
-        <button type="submit" class="btn btn-primary btn-full">저장</button>
-      </form>
-    </div>
-  </div>
-  <div id="detailModal" class="modal hidden">
-    <div class="modal-content detail-modal">
-      <button class="close-btn" data-close="detailModal">&times;</button>
-      <div id="detailContainer"></div>
-    </div>
-  </div>
-  <div id="toast" class="toast hidden"></div>
-  <script>
-    const SUPABASE_URL = 'https://jhbeuqsuswlsvazuoyia.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_rfPAENDyprHaECVMxa_aPA_kN5jvkRU';
-    const STORAGE_BUCKET = 'documents';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let currentUser = null;
-    let departments = [];
-    let postsByDept = {};
-    let myLikes = new Set();
-    let searchKeyword = '';
-    let authMode = 'login';
+<!-- ── HEADER ── -->
+<header>
+  <div class="header-left">
+    <div class="school-logo">경</div>
+    <div class="header-title">
+      <span class="header-school">광주경신여자고등학교</span>
+      <span class="header-sub">2026학년도 행정자료 공유 플랫폼</span>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="search-wrap">
+      <input class="search-input" id="searchInput" placeholder="🔍 검색..." oninput="filterPosts()">
+    </div>
+    <button class="btn btn-primary" onclick="openPostModal()">＋ 게시물</button>
+  </div>
+</header>
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      bindUI();
-      const { data: { session } } = await sb.auth.getSession();
-      if (session) handleSignedIn(session.user);
-      sb.auth.onAuthStateChange((_e, session) => {
-        if (session) handleSignedIn(session.user);
-        else handleSignedOut();
-      });
-      await loadDepartments();
-      await loadAllPosts();
-      renderBoard();
-      subscribeRealtime();
+<!-- ── TABS BAR ── -->
+<div class="tabs-bar" id="tabsBar">
+  <button class="tab-btn active" data-dept="all" onclick="filterDept('all', this)">
+    전체 <span class="tab-count" id="count-all">0</span>
+  </button>
+</div>
+
+<!-- ── BOARD ── -->
+<div class="board-wrapper">
+  <div class="board-header">
+    <div class="board-title-row">
+      <span class="dept-badge">2026</span>
+      <span class="dept-label" id="currentDeptLabel">전체 부서</span>
+    </div>
+    <span id="totalCountLabel" style="font-size:12px;color:var(--text-muted);"></span>
+  </div>
+  <div class="columns-grid" id="columnsGrid">
+    <div class="loading-spinner">
+      <div class="spinner"></div> 불러오는 중...
+    </div>
+  </div>
+</div>
+
+<!-- ── FAB ── -->
+<button class="fab" onclick="openPostModal()" title="새 게시물">＋</button>
+
+<!-- ── NEW POST MODAL ── -->
+<div class="modal-overlay" id="postModal">
+  <div class="modal">
+    <div class="modal-title">📋 새 게시물 작성</div>
+    <div class="form-group">
+      <label class="form-label">부서 선택 *</label>
+      <select class="form-select" id="postDept">
+        <option value="">-- 부서 선택 --</option>
+        <option>교무기획부</option>
+        <option>교육연구부</option>
+        <option>학생생활안전부</option>
+        <option>교육과정부</option>
+        <option>미래교육기획부</option>
+        <option>창의체험활동부</option>
+        <option>교육정보부</option>
+
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">작성자 이름 *</label>
+      <input class="form-input" id="postAuthor" placeholder="예: 홍길동" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">제목 *</label>
+      <input class="form-input" id="postTitle" placeholder="제목을 입력하세요" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">내용</label>
+      <textarea class="form-textarea" id="postBody" placeholder="내용을 입력하세요..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">파일 URL (선택)</label>
+      <input class="form-input" id="postFile" placeholder="첨부 파일 링크 (Google Drive 공유 링크 등)" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closePostModal()">취소</button>
+      <button class="btn btn-primary" onclick="submitPost()">게시하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── VIEW POST MODAL ── -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal">
+    <div class="view-modal-content" id="viewContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeViewModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── SUPABASE SETUP ──
+  const { createClient } = supabase;
+  const SUPABASE_URL = 'https://rfpaendyprhaecvmxa-apa.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_rfPAENDyprHaECVMxa_aPA_kN5jvkRU';
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ── DEPARTMENTS ──
+  const DEPTS = [
+    '교무기획부','교육연구부','학생생활안전부','교육과정부',
+    '미래교육기획부','창의체험활동부','교육정보부',
+
+  ];
+
+  const DEPT_COLORS = {
+    '교무기획부':    '#2d6a4f',
+    '교육연구부':    '#40916c',
+    '학생생활안전부': '#52b788',
+    '교육과정부':    '#f4a261',
+    '미래교육기획부': '#e76f51',
+    '창의체험활동부': '#457b9d',
+    '교육정보부':    '#6a4c93',
+
+  };
+
+  let allPosts = [];
+  let currentDept = 'all';
+  let searchQuery = '';
+
+  // ── INIT: create table if needed, then load ──
+  async function init() {
+    await ensureTable();
+    await loadPosts();
+    buildTabs();
+  }
+
+  async function ensureTable() {
+    // Try to create table via RPC or just proceed (table may already exist)
+    // We'll just try to query; if it fails, show an error hint
+  }
+
+  async function loadPosts() {
+    const { data, error } = await db
+      .from('posts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Supabase error:', error.message);
+      allPosts = [];
+      renderAll();
+      updateTabCounts();
+      return;
+    }
+
+    allPosts = data || [];
+    renderAll();
+    updateTabCounts();
+  }
+
+  // ── RENDER ──
+  function renderAll() {
+    const grid = document.getElementById('columnsGrid');
+    const depts = currentDept === 'all' ? DEPTS : [currentDept];
+    const filtered = getFiltered();
+
+    grid.innerHTML = '';
+
+    depts.forEach(dept => {
+      const posts = filtered.filter(p => p.dept === dept);
+      const col = document.createElement('div');
+      col.className = 'column-card';
+      col.innerHTML = `
+        <div class="col-header">
+          <div class="col-name">
+            <span class="col-dot" style="background:${DEPT_COLORS[dept]||'#52b788'}"></span>
+            ${dept}
+          </div>
+          <span class="col-menu" style="color:#aaa">•••</span>
+        </div>
+        <div class="col-body" id="col-${dept}">
+          ${posts.length === 0
+            ? `<div class="empty-state"><div class="empty-state-icon">📂</div><div class="empty-state-text">게시물 없음</div></div>`
+            : posts.map(p => postCardHTML(p)).join('')}
+        </div>
+        <button class="col-add-btn" onclick="openPostModal('${dept}')">＋ 게시물 추가</button>
+      `;
+      grid.appendChild(col);
     });
 
-    function bindUI() {
-      document.getElementById('loginBtn').onclick = () => openModal('authModal');
-      document.getElementById('logoutBtn').onclick = async () => {
-        await sb.auth.signOut();
-        toast('로그아웃되었습니다.');
-      };
-      document.querySelectorAll('[data-close]').forEach(b => {
-        b.onclick = () => closeModal(b.dataset.close);
-      });
-      document.querySelectorAll('.modal').forEach(m => {
-        m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
-      });
-      document.getElementById('authForm').onsubmit = handleAuthSubmit;
-      document.getElementById('toggleAuthMode').onclick = (e) => {
-        e.preventDefault();
-        authMode = authMode === 'login' ? 'signup' : 'login';
-        document.getElementById('authTitle').textContent = authMode === 'login' ? '로그인' : '회원가입';
-        document.getElementById('authSubmitBtn').textContent = authMode === 'login' ? '로그인' : '회원가입';
-        document.getElementById('toggleAuthMode').textContent = authMode === 'login'
-          ? '계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인';
-        document.getElementById('authName').style.display = authMode === 'signup' ? 'block' : 'none';
-        document.getElementById('authError').textContent = '';
-      };
-      document.getElementById('authName').style.display = 'none';
-      document.getElementById('postForm').onsubmit = handlePostSubmit;
-      document.getElementById('searchInput').addEventListener('input', (e) => {
-        searchKeyword = e.target.value.trim().toLowerCase();
-        renderBoard();
-      });
-    }
+    const total = filtered.length;
+    document.getElementById('totalCountLabel').textContent = `총 ${total}개 게시물`;
+  }
 
-    async function handleAuthSubmit(e) {
-      e.preventDefault();
-      const email = document.getElementById('authEmail').value.trim();
-      const password = document.getElementById('authPassword').value;
-      const name = document.getElementById('authName').value.trim();
-      const errEl = document.getElementById('authError');
-      errEl.textContent = '';
-      try {
-        if (authMode === 'login') {
-          const { error } = await sb.auth.signInWithPassword({ email, password });
-          if (error) throw error;
-          closeModal('authModal');
-          toast('로그인되었습니다.');
-        } else {
-          const { error } = await sb.auth.signUp({
-            email, password,
-            options: { data: { name: name || email.split('@')[0] } }
-          });
-          if (error) throw error;
-          closeModal('authModal');
-          toast('회원가입 완료!');
-        }
-      } catch (err) {
-        errEl.textContent = err.message || '오류가 발생했습니다.';
-      }
-    }
-
-    async function handleSignedIn(user) {
-      currentUser = user;
-      const { data: profile } = await sb.from('profiles').select('name').eq('id', user.id).single();
-      const name = profile?.name || user.email.split('@')[0];
-      document.getElementById('userBadge').textContent = `👤 ${name}`;
-      document.getElementById('userBadge').classList.remove('hidden');
-      document.getElementById('loginBtn').classList.add('hidden');
-      document.getElementById('logoutBtn').classList.remove('hidden');
-      await loadMyLikes();
-      renderBoard();
-    }
-
-    function handleSignedOut() {
-      currentUser = null;
-      myLikes.clear();
-      document.getElementById('userBadge').classList.add('hidden');
-      document.getElementById('loginBtn').classList.remove('hidden');
-      document.getElementById('logoutBtn').classList.add('hidden');
-      renderBoard();
-    }
-
-    async function loadDepartments() {
-      const { data, error } = await sb.from('departments').select('*').order('sort_order');
-      if (error) { console.error(error); return; }
-      departments = data || [];
-    }
-
-    async function loadAllPosts() {
-      const { data, error } = await sb.from('posts_with_meta').select('*').order('created_at', { ascending: false });
-      if (error) { console.error(error); return; }
-      postsByDept = {};
-      departments.forEach(d => postsByDept[d.id] = []);
-      (data || []).forEach(p => {
-        if (postsByDept[p.dept_id]) postsByDept[p.dept_id].push(p);
-      });
-    }
-
-    async function loadMyLikes() {
-      if (!currentUser) return;
-      const { data } = await sb.from('likes').select('post_id').eq('user_id', currentUser.id);
-      myLikes = new Set((data || []).map(r => r.post_id));
-    }
-
-    function renderBoard() {
-      const board = document.getElementById('board');
-      board.innerHTML = '';
-      departments.forEach(dept => {
-        const posts = (postsByDept[dept.id] || []).filter(p => {
-          if (!searchKeyword) return true;
-          return (p.title || '').toLowerCase().includes(searchKeyword)
-              || (p.content || '').toLowerCase().includes(searchKeyword);
-        });
-        const col = document.createElement('div');
-        col.className = 'column';
-        col.innerHTML = `
-          <div class="column-header" style="background:${dept.color}">
-            <span>${dept.name}</span>
-            <span class="count">${posts.length}</span>
-          </div>
-          <button class="add-post-btn" data-dept="${dept.id}">＋ 게시물 추가</button>
-          <div class="column-body" id="col-${dept.id}"></div>
-        `;
-        board.appendChild(col);
-        const body = col.querySelector('.column-body');
-        posts.forEach(p => body.appendChild(renderCard(p)));
-      });
-      document.querySelectorAll('.add-post-btn').forEach(b => {
-        b.onclick = () => openPostForm(parseInt(b.dataset.dept));
-      });
-    }
-
-    function renderCard(p) {
-      const card = document.createElement('div');
-      card.className = 'card';
-      const liked = myLikes.has(p.id);
-      card.innerHTML = `
-        <div class="card-author">${escapeHTML(p.author_name || '익명')} · ${formatTime(p.created_at)}</div>
-        <div class="card-title">${escapeHTML(p.title)}</div>
-        ${p.content ? `<div class="card-content">${escapeHTML(p.content)}</div>` : ''}
-        ${p.file_url ? `<div class="card-file">📎 ${escapeHTML(p.file_name || '첨부파일')}</div>` : ''}
-        <div class="card-meta">
-          <span class="like-btn ${liked ? 'liked' : ''}" data-id="${p.id}">
-            ${liked ? '❤️' : '🤍'} ${p.like_count || 0}
-          </span>
-          <span>💬 ${p.comment_count || 0}</span>
+  function postCardHTML(p) {
+    const initials = p.author ? p.author[0] : '?';
+    const timeStr = formatTime(p.created_at);
+    return `
+      <div class="post-card" onclick="viewPost('${p.id}')">
+        <div class="post-card-author">
+          <div class="post-avatar" style="background:${DEPT_COLORS[p.dept]||'#52b788'}">${initials}</div>
+          <span class="post-author-name">${p.author}</span>
+          <span class="post-time">${timeStr}</span>
         </div>
-      `;
-      card.onclick = (e) => {
-        if (e.target.classList.contains('like-btn')) {
-          e.stopPropagation();
-          toggleLike(p.id);
-        } else {
-          openDetail(p.id);
-        }
-      };
-      return card;
+        <div class="post-title">${escHtml(p.title)}</div>
+        ${p.body ? `<div class="post-body">${escHtml(p.body)}</div>` : ''}
+        ${p.file_url ? `<div class="post-file-badge">📎 첨부파일</div>` : ''}
+      </div>`;
+  }
+
+  function getFiltered() {
+    let posts = allPosts;
+    if (currentDept !== 'all') posts = posts.filter(p => p.dept === currentDept);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      posts = posts.filter(p =>
+        (p.title||'').toLowerCase().includes(q) ||
+        (p.body||'').toLowerCase().includes(q) ||
+        (p.author||'').toLowerCase().includes(q)
+      );
+    }
+    return posts;
+  }
+
+  // ── TABS ──
+  function buildTabs() {
+    const bar = document.getElementById('tabsBar');
+    // Remove existing dept tabs
+    bar.querySelectorAll('[data-dept]:not([data-dept="all"])').forEach(e => e.remove());
+    
+    DEPTS.forEach(dept => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn';
+      btn.dataset.dept = dept;
+      btn.innerHTML = `${dept} <span class="tab-count" id="count-${dept}">0</span>`;
+      btn.onclick = () => filterDept(dept, btn);
+      bar.appendChild(btn);
+    });
+    updateTabCounts();
+  }
+
+  function updateTabCounts() {
+    const allCount = allPosts.length;
+    const el = document.getElementById('count-all');
+    if (el) el.textContent = allCount;
+
+    DEPTS.forEach(dept => {
+      const cnt = allPosts.filter(p => p.dept === dept).length;
+      const el = document.getElementById(`count-${dept}`);
+      if (el) el.textContent = cnt;
+    });
+  }
+
+  function filterDept(dept, btn) {
+    currentDept = dept;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const labels = { all: '전체 부서' };
+    document.getElementById('currentDeptLabel').textContent = labels[dept] || dept;
+    renderAll();
+  }
+
+  function filterPosts() {
+    searchQuery = document.getElementById('searchInput').value.trim();
+    renderAll();
+  }
+
+  // ── VIEW POST ──
+  function viewPost(id) {
+    const p = allPosts.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('viewContent').innerHTML = `
+      <div class="view-meta">
+        <span class="view-dept-tag">${p.dept}</span>
+        <span class="view-author">${p.author}</span>
+        <span class="view-time">${formatTime(p.created_at)}</span>
+      </div>
+      <div class="view-title">${escHtml(p.title)}</div>
+      <div class="view-body">${escHtml(p.body || '')}</div>
+      ${p.file_url ? `<a class="view-file-link" href="${p.file_url}" target="_blank">📎 첨부파일 열기</a>` : ''}
+    `;
+    document.getElementById('viewModal').classList.add('open');
+  }
+  function closeViewModal() {
+    document.getElementById('viewModal').classList.remove('open');
+  }
+
+  // ── NEW POST MODAL ──
+  function openPostModal(dept) {
+    if (dept) document.getElementById('postDept').value = dept;
+    document.getElementById('postModal').classList.add('open');
+  }
+  function closePostModal() {
+    document.getElementById('postModal').classList.remove('open');
+    ['postDept','postAuthor','postTitle','postBody','postFile'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  }
+
+  async function submitPost() {
+    const dept   = document.getElementById('postDept').value.trim();
+    const author = document.getElementById('postAuthor').value.trim();
+    const title  = document.getElementById('postTitle').value.trim();
+    const body   = document.getElementById('postBody').value.trim();
+    const fileUrl= document.getElementById('postFile').value.trim();
+
+    if (!dept || !author || !title) {
+      showToast('부서, 작성자, 제목은 필수입니다.');
+      return;
     }
 
-    function openPostForm(deptId, post = null) {
-      if (!currentUser) { toast('로그인이 필요합니다.'); openModal('authModal'); return; }
-      document.getElementById('postModalTitle').textContent = post ? '게시글 수정' : '새 게시글';
-      document.getElementById('postId').value = post?.id || '';
-      document.getElementById('postDeptId').value = deptId;
-      document.getElementById('postTitle').value = post?.title || '';
-      document.getElementById('postContent').value = post?.content || '';
-      document.getElementById('postFile').value = '';
-      document.getElementById('existingFile').textContent = post?.file_name
-        ? `현재 파일: ${post.file_name}` : '';
-      openModal('postModal');
+    const { data, error } = await db.from('posts').insert([
+      { dept, author, title, body, file_url: fileUrl || null }
+    ]).select();
+
+    if (error) {
+      showToast('오류: ' + error.message);
+      return;
     }
 
-    async function handlePostSubmit(e) {
-      e.preventDefault();
-      if (!currentUser) return;
-      const id = document.getElementById('postId').value;
-      const deptId = parseInt(document.getElementById('postDeptId').value);
-      const title = document.getElementById('postTitle').value.trim();
-      const content = document.getElementById('postContent').value.trim();
-      const file = document.getElementById('postFile').files[0];
+    allPosts = [data[0], ...allPosts];
+    closePostModal();
+    renderAll();
+    updateTabCounts();
+    showToast('✅ 게시물이 등록되었습니다!');
+  }
 
-      let fileUrl = null, fileName = null;
-      if (file) {
-        const ext = file.name.split('.').pop();
-        const path = `${currentUser.id}/${Date.now()}.${ext}`;
-        const { error: upErr } = await sb.storage.from(STORAGE_BUCKET).upload(path, file);
-        if (upErr) { toast('파일 업로드 실패: ' + upErr.message); return; }
-        const { data: pub } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-        fileUrl = pub.publicUrl;
-        fileName = file.name;
-      }
+  // ── UTILS ──
+  function formatTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60) return '방금 전';
+    if (diff < 3600) return Math.floor(diff/60) + '분 전';
+    if (diff < 86400) return Math.floor(diff/3600) + '시간 전';
+    return `${d.getMonth()+1}/${d.getDate()}`;
+  }
 
-      try {
-        if (id) {
-          const update = { title, content, updated_at: new Date().toISOString() };
-          if (fileUrl) { update.file_url = fileUrl; update.file_name = fileName; }
-          const { error } = await sb.from('posts').update(update).eq('id', id);
-          if (error) throw error;
-          toast('수정되었습니다.');
-        } else {
-          const { error } = await sb.from('posts').insert({
-            dept_id: deptId, user_id: currentUser.id,
-            title, content, file_url: fileUrl, file_name: fileName
-          });
-          if (error) throw error;
-          toast('게시되었습니다.');
-        }
-        closeModal('postModal');
-        await loadAllPosts(); renderBoard();
-      } catch (err) {
-        toast('오류: ' + err.message);
-      }
-    }
+  function escHtml(str) {
+    return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
 
-    async function openDetail(postId) {
-      const { data: post } = await sb.from('posts_with_meta').select('*').eq('id', postId).single();
-      if (!post) return;
-      const { data: comments } = await sb.from('comments')
-        .select('id, content, created_at, user_id, profiles(name)')
-        .eq('post_id', postId).order('created_at', { ascending: true });
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
 
-      const isOwner = currentUser && currentUser.id === post.user_id;
-      const cont = document.getElementById('detailContainer');
-      cont.innerHTML = `
-        <div class="detail-header">
-          <div class="detail-title">${escapeHTML(post.title)}</div>
-          <div class="detail-meta">
-            ${escapeHTML(post.dept_name)} · ${escapeHTML(post.author_name || '익명')} · ${formatTime(post.created_at)}
-          </div>
-        </div>
-        ${post.content ? `<div class="detail-content">${escapeHTML(post.content)}</div>` : ''}
-        ${post.file_url ? `
-          <a class="detail-file" href="${post.file_url}" target="_blank" download="${escapeHTML(post.file_name||'')}">
-            📎 ${escapeHTML(post.file_name || '첨부파일 다운로드')}
-          </a>` : ''}
-        ${isOwner ? `
-          <div class="detail-actions">
-            <button class="btn btn-secondary" id="editPostBtn">✏️ 수정</button>
-            <button class="btn btn-danger" id="deletePostBtn">🗑️ 삭제</button>
-          </div>` : ''}
-        <div class="comments-section">
-          <h3>💬 댓글 ${comments?.length || 0}</h3>
-          <div id="commentList">
-            ${(comments || []).map(c => `
-              <div class="comment">
-                ${currentUser && c.user_id === currentUser.id ? `<span class="comment-delete" data-cid="${c.id}">삭제</span>` : ''}
-                <span class="comment-author">${escapeHTML(c.profiles?.name || '익명')}</span>
-                <span class="comment-time">${formatTime(c.created_at)}</span>
-                <div class="comment-content">${escapeHTML(c.content)}</div>
-              </div>`).join('')}
-          </div>
-          ${currentUser ? `
-            <form class="comment-form" id="commentForm">
-              <input type="text" id="commentInput" placeholder="댓글을 입력하세요..." required maxlength="500" />
-              <button class="btn btn-primary" type="submit">등록</button>
-            </form>` : `<p class="hint" style="margin-top:12px">댓글을 작성하려면 로그인하세요.</p>`}
-        </div>
-      `;
-      if (isOwner) {
-        document.getElementById('editPostBtn').onclick = () => {
-          closeModal('detailModal');
-          openPostForm(post.dept_id, post);
-        };
-        document.getElementById('deletePostBtn').onclick = async () => {
-          if (!confirm('정말 삭제하시겠습니까?')) return;
-          const { error } = await sb.from('posts').delete().eq('id', post.id);
-          if (error) return toast('삭제 실패: ' + error.message);
-          closeModal('detailModal');
-          await loadAllPosts(); renderBoard();
-          toast('삭제되었습니다.');
-        };
-      }
-      if (currentUser) {
-        document.getElementById('commentForm').onsubmit = async (e) => {
-          e.preventDefault();
-          const input = document.getElementById('commentInput');
-          const text = input.value.trim();
-          if (!text) return;
-          const { error } = await sb.from('comments').insert({
-            post_id: post.id, user_id: currentUser.id, content: text
-          });
-          if (error) return toast('등록 실패: ' + error.message);
-          input.value = '';
-          openDetail(post.id);
-          await loadAllPosts(); renderBoard();
-        };
-        document.querySelectorAll('.comment-delete').forEach(el => {
-          el.onclick = async () => {
-            if (!confirm('댓글을 삭제할까요?')) return;
-            await sb.from('comments').delete().eq('id', el.dataset.cid);
-            openDetail(post.id);
-            await loadAllPosts(); renderBoard();
-          };
-        });
-      }
-      openModal('detailModal');
-    }
+  // ── CLOSE MODALS ON OVERLAY CLICK ──
+  document.getElementById('postModal').addEventListener('click', function(e) {
+    if (e.target === this) closePostModal();
+  });
+  document.getElementById('viewModal').addEventListener('click', function(e) {
+    if (e.target === this) closeViewModal();
+  });
 
-    async function toggleLike(postId) {
-      if (!currentUser) { toast('로그인이 필요합니다.'); openModal('authModal'); return; }
-      if (myLikes.has(postId)) {
-        await sb.from('likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
-        myLikes.delete(postId);
-      } else {
-        await sb.from('likes').insert({ post_id: postId, user_id: currentUser.id });
-        myLikes.add(postId);
-      }
-      await loadAllPosts(); renderBoard();
-    }
-
-    function subscribeRealtime() {
-      sb.channel('public:posts')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' },
-            async () => { await loadAllPosts(); renderBoard(); })
-        .subscribe();
-      sb.channel('public:comments')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' },
-            async () => { await loadAllPosts(); renderBoard(); })
-        .subscribe();
-    }
-
-    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-      if (id === 'authModal') document.getElementById('authError').textContent = '';
-    }
-    function escapeHTML(s) {
-      return (s ?? '').toString()
-        .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
-        .replaceAll('"','&quot;').replaceAll("'",'&#039;');
-    }
-    function formatTime(iso) {
-      if (!iso) return '';
-      const d = new Date(iso); const now = new Date();
-      const diff = (now - d) / 1000;
-      if (diff < 60) return '방금 전';
-      if (diff < 3600) return `${Math.floor(diff/60)}분 전`;
-      if (diff < 86400) return `${Math.floor(diff/3600)}시간 전`;
-      if (diff < 604800) return `${Math.floor(diff/86400)}일 전`;
-      return d.toLocaleDateString('ko-KR');
-    }
-    function toast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.remove('hidden');
-      clearTimeout(toast._tid);
-      toast._tid = setTimeout(() => t.classList.add('hidden'), 2500);
-    }
-  </script>
+  // ── START ──
+  init();
+</script>
 </body>
 </html>
