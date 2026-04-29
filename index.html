@@ -85,26 +85,22 @@
     .form-textarea{resize:vertical;min-height:100px}
     .modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
 
-    .file-upload-area{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all 0.18s;position:relative;background:var(--surface)}
+    .file-upload-area{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;transition:all 0.18s;background:var(--surface);cursor:pointer}
     .file-upload-area:hover,.file-upload-area.dragover{border-color:var(--primary-light);background:var(--surface2)}
-    .file-upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
     .file-upload-icon{font-size:32px;margin-bottom:8px}
     .file-upload-text{font-size:13px;color:var(--text-muted);font-weight:500}
     .file-upload-hint{font-size:11px;color:#aaa;margin-top:4px}
+    .file-upload-tip{font-size:11px;color:var(--accent2);margin-top:6px;font-weight:600}
 
-    /* 다중 파일 목록 */
-    .file-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto}
+    .file-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
     .file-list-item{display:flex;align-items:center;gap:8px;background:#e8f4ea;border-radius:8px;padding:8px 12px;font-size:12px;color:var(--primary);border:1px solid #b7e4c7}
-    .file-list-item.uploading{background:#fff8f0;border-color:#f4a261;color:var(--accent2)}
     .file-list-item.existing{background:#eff6ff;border-color:#a5c7ee;color:#1e40af}
     .file-list-icon{font-size:14px;flex-shrink:0}
     .file-list-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
     .file-list-size{font-size:10px;color:var(--text-muted);flex-shrink:0}
-    .file-list-remove{cursor:pointer;color:var(--danger);font-size:16px;flex-shrink:0;line-height:1;background:none;border:none;padding:2px 6px;border-radius:4px}
-    .file-list-remove:hover{background:rgba(230,57,70,0.1)}
-    .file-list-progress{width:60px;height:4px;background:#fff;border-radius:2px;overflow:hidden;flex-shrink:0}
-    .file-list-progress-fill{height:100%;background:var(--accent);transition:width 0.3s}
-    .file-list-summary{font-size:11px;color:var(--text-muted);margin-top:6px;text-align:right}
+    .file-list-remove{cursor:pointer;color:var(--danger);font-size:16px;flex-shrink:0;line-height:1;background:none;border:none;padding:2px 8px;border-radius:4px;font-weight:700}
+    .file-list-remove:hover{background:rgba(230,57,70,0.15)}
+    .file-list-summary{font-size:11px;color:var(--text-muted);margin-top:8px;text-align:right;font-weight:600}
 
     .view-meta{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
     .view-dept-tag{color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
@@ -214,12 +210,13 @@
     </div>
     <div class="form-group">
       <label class="form-label">파일 첨부 (여러 개 선택 가능)</label>
-      <div class="file-upload-area" id="fileDropArea">
-        <input type="file" id="postFileInput" multiple onchange="handleFileSelect(this)">
+      <div class="file-upload-area" id="fileDropArea" onclick="document.getElementById('postFileInput').click()">
         <div class="file-upload-icon">📁</div>
-        <div class="file-upload-text">클릭하여 여러 파일 선택 또는 드래그</div>
-        <div class="file-upload-hint">한 번에 여러 개 가능 · HWP, PDF, DOCX, XLSX, 이미지 등 · 각 파일 최대 50MB</div>
+        <div class="file-upload-text">클릭하여 파일 선택 또는 여기로 드래그</div>
+        <div class="file-upload-hint">HWP, PDF, DOCX, XLSX, 이미지 등 · 각 파일 최대 50MB</div>
+        <div class="file-upload-tip">💡 Ctrl 키 또는 Shift 키로 여러 파일 선택 가능!</div>
       </div>
+      <input type="file" id="postFileInput" multiple style="display:none">
       <div class="file-list" id="fileList"></div>
       <div class="file-list-summary" id="fileListSummary" style="display:none"></div>
     </div>
@@ -271,32 +268,133 @@
   };
 
   let allPosts=[], currentDept='all', searchQuery='', viewingPostId=null;
-  let pendingFiles=[];   // 새로 추가한 파일 [File, File, ...]
-  let existingFiles=[];  // 수정 시 이미 저장되어 있는 파일들 [{url,name,size,path}, ...]
+  let pendingFiles=[];
+  let existingFiles=[];
 
   async function init() {
+    setupFileInput();
+    setupDragDrop();
     await loadPosts();
     buildTabs();
-    setupDragDrop();
   }
 
+  // ===== 파일 입력 이벤트 (가장 중요한 부분) =====
+  function setupFileInput() {
+    const input = document.getElementById('postFileInput');
+    input.addEventListener('change', function(e) {
+      console.log('파일 선택됨:', e.target.files.length, '개');
+      addFiles(e.target.files);
+      e.target.value = '';
+    });
+  }
+
+  function setupDragDrop() {
+    const area = document.getElementById('fileDropArea');
+    area.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      area.classList.add('dragover');
+    });
+    area.addEventListener('dragleave', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      area.classList.remove('dragover');
+    });
+    area.addEventListener('drop', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      area.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      console.log('드래그된 파일:', files.length, '개');
+      addFiles(files);
+    });
+  }
+
+  function addFiles(fileList) {
+    if(!fileList || fileList.length === 0) return;
+    const files = Array.from(fileList);
+    let added = 0, rejected = 0;
+    for(const f of files) {
+      if(f.size > 50 * 1024 * 1024) {
+        showToast(`"${f.name}" 50MB 초과로 제외`);
+        rejected++;
+        continue;
+      }
+      const dup = pendingFiles.some(x => x.name === f.name && x.size === f.size);
+      if(!dup) {
+        pendingFiles.push(f);
+        added++;
+      }
+    }
+    if(added > 0) showToast(`${added}개 파일 추가됨`);
+    renderFileList();
+  }
+
+  function renderFileList() {
+    const list = document.getElementById('fileList');
+    const summary = document.getElementById('fileListSummary');
+    list.innerHTML = '';
+
+    existingFiles.forEach((f, idx) => {
+      const el = document.createElement('div');
+      el.className = 'file-list-item existing';
+      el.innerHTML = `
+        <span class="file-list-icon">📎</span>
+        <span class="file-list-name">${esc(f.name)}</span>
+        <span class="file-list-size">${fmtSize(f.size)}</span>
+        <button class="file-list-remove" type="button" data-action="remove-existing" data-idx="${idx}">×</button>`;
+      list.appendChild(el);
+    });
+
+    pendingFiles.forEach((f, idx) => {
+      const el = document.createElement('div');
+      el.className = 'file-list-item';
+      el.innerHTML = `
+        <span class="file-list-icon">📄</span>
+        <span class="file-list-name">${esc(f.name)}</span>
+        <span class="file-list-size">${fmtSize(f.size)}</span>
+        <button class="file-list-remove" type="button" data-action="remove-pending" data-idx="${idx}">×</button>`;
+      list.appendChild(el);
+    });
+
+    list.querySelectorAll('[data-action]').forEach(btn => {
+      btn.onclick = () => {
+        const action = btn.dataset.action;
+        const idx = parseInt(btn.dataset.idx);
+        if(action === 'remove-existing') existingFiles.splice(idx, 1);
+        else if(action === 'remove-pending') pendingFiles.splice(idx, 1);
+        renderFileList();
+      };
+    });
+
+    const total = existingFiles.length + pendingFiles.length;
+    if(total > 0) {
+      summary.style.display = 'block';
+      summary.textContent = `📦 총 ${total}개 파일 (기존 ${existingFiles.length} + 신규 ${pendingFiles.length})`;
+    } else {
+      summary.style.display = 'none';
+    }
+  }
+
+  // ===== 데이터 로드 / 렌더링 =====
   async function loadPosts() {
-    const { data, error } = await db.from('posts').select('*').order('created_at',{ascending:false});
-    if(error){ console.warn(error.message); allPosts=[]; }
-    else allPosts = data||[];
-    renderAll(); updateTabCounts();
+    const { data, error } = await db.from('posts').select('*').order('created_at', {ascending:false});
+    if(error) { console.warn('loadPosts error:', error.message); allPosts = []; }
+    else allPosts = data || [];
+    renderAll();
+    updateTabCounts();
   }
 
   function renderAll() {
     const grid = document.getElementById('columnsGrid');
-    const depts = currentDept==='all' ? DEPTS : [currentDept];
+    const depts = currentDept === 'all' ? DEPTS : [currentDept];
     const filtered = getFiltered();
-    grid.innerHTML='';
+    grid.innerHTML = '';
     depts.forEach(dept => {
-      const posts = filtered.filter(p=>p.dept===dept);
+      const posts = filtered.filter(p => p.dept === dept);
       const col = document.createElement('div');
-      col.className='column-card';
-      col.innerHTML=`
+      col.className = 'column-card';
+      col.innerHTML = `
         <div class="col-header">
           <div class="col-name">
             <span class="col-dot" style="background:${DEPT_COLORS[dept]||'#52b788'}"></span>${dept}
@@ -305,17 +403,17 @@
         <div class="col-body">
           ${posts.length===0
             ? `<div class="empty-state"><div class="empty-state-icon">📂</div><div class="empty-state-text">게시물 없음</div></div>`
-            : posts.map(p=>postCardHTML(p)).join('')}
+            : posts.map(p => postCardHTML(p)).join('')}
         </div>
         <button class="col-add-btn" onclick="openPostModal('${dept}')">＋ 게시물 추가</button>`;
       grid.appendChild(col);
     });
-    document.getElementById('totalCountLabel').textContent=`총 ${filtered.length}개 게시물`;
+    document.getElementById('totalCountLabel').textContent = `총 ${filtered.length}개 게시물`;
   }
 
   function postCardHTML(p) {
-    const color = DEPT_COLORS[p.dept]||'#52b788';
-    const fileCount = (p.files||[]).length;
+    const color = DEPT_COLORS[p.dept] || '#52b788';
+    const fileCount = (p.files || []).length;
     return `<div class="post-card" onclick="viewPost('${p.id}')">
       <div class="post-card-author">
         <div class="post-avatar" style="background:${color}">${(p.author||'?')[0]}</div>
@@ -323,61 +421,73 @@
         <span class="post-time">${fmtTime(p.created_at)}</span>
       </div>
       <div class="post-title">${esc(p.title)}</div>
-      ${p.body?`<div class="post-body">${esc(p.body)}</div>`:''}
-      ${fileCount>0?`<div class="post-file-badge">📎 파일 ${fileCount}개 첨부</div>`:''}
+      ${p.body ? `<div class="post-body">${esc(p.body)}</div>` : ''}
+      ${fileCount > 0 ? `<div class="post-file-badge">📎 파일 ${fileCount}개 첨부</div>` : ''}
     </div>`;
   }
 
   function getFiltered() {
     let posts = allPosts;
-    if(currentDept!=='all') posts=posts.filter(p=>p.dept===currentDept);
-    if(searchQuery){
-      const q=searchQuery.toLowerCase();
-      posts=posts.filter(p=>(p.title||'').toLowerCase().includes(q)||(p.body||'').toLowerCase().includes(q)||(p.author||'').toLowerCase().includes(q));
+    if(currentDept !== 'all') posts = posts.filter(p => p.dept === currentDept);
+    if(searchQuery) {
+      const q = searchQuery.toLowerCase();
+      posts = posts.filter(p =>
+        (p.title||'').toLowerCase().includes(q) ||
+        (p.body||'').toLowerCase().includes(q) ||
+        (p.author||'').toLowerCase().includes(q)
+      );
     }
     return posts;
   }
 
   function buildTabs() {
-    const bar=document.getElementById('tabsBar');
-    bar.querySelectorAll('[data-dept]:not([data-dept="all"])').forEach(e=>e.remove());
-    DEPTS.forEach(dept=>{
-      const btn=document.createElement('button');
-      btn.className='tab-btn'; btn.dataset.dept=dept;
-      btn.innerHTML=`${dept} <span class="tab-count" id="count-${dept}">0</span>`;
-      btn.onclick=()=>filterDept(dept,btn);
+    const bar = document.getElementById('tabsBar');
+    bar.querySelectorAll('[data-dept]:not([data-dept="all"])').forEach(e => e.remove());
+    DEPTS.forEach(dept => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn';
+      btn.dataset.dept = dept;
+      btn.innerHTML = `${dept} <span class="tab-count" id="count-${dept}">0</span>`;
+      btn.onclick = () => filterDept(dept, btn);
       bar.appendChild(btn);
     });
     updateTabCounts();
   }
 
   function updateTabCounts() {
-    const el=document.getElementById('count-all');
-    if(el) el.textContent=allPosts.length;
-    DEPTS.forEach(dept=>{ const e=document.getElementById(`count-${dept}`); if(e) e.textContent=allPosts.filter(p=>p.dept===dept).length; });
+    const el = document.getElementById('count-all');
+    if(el) el.textContent = allPosts.length;
+    DEPTS.forEach(dept => {
+      const e = document.getElementById(`count-${dept}`);
+      if(e) e.textContent = allPosts.filter(p => p.dept === dept).length;
+    });
   }
 
-  function filterDept(dept,btn) {
-    currentDept=dept;
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  function filterDept(dept, btn) {
+    currentDept = dept;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('currentDeptLabel').textContent=dept==='all'?'전체 부서':dept;
+    document.getElementById('currentDeptLabel').textContent = dept === 'all' ? '전체 부서' : dept;
     renderAll();
   }
 
-  function filterPosts(){ searchQuery=document.getElementById('searchInput').value.trim(); renderAll(); }
+  function filterPosts() {
+    searchQuery = document.getElementById('searchInput').value.trim();
+    renderAll();
+  }
 
-  // VIEW
+  // ===== 게시물 보기 =====
   function viewPost(id) {
-    const p=allPosts.find(x=>x.id===id); if(!p) return;
-    viewingPostId=id;
-    const color=DEPT_COLORS[p.dept]||'#52b788';
-    const files = p.files||[];
-    const filesHTML = files.length>0 ? `
+    const p = allPosts.find(x => x.id === id);
+    if(!p) return;
+    viewingPostId = id;
+    const color = DEPT_COLORS[p.dept] || '#52b788';
+    const files = p.files || [];
+    const filesHTML = files.length > 0 ? `
       <div class="view-files">
         <div class="view-files-title">📎 첨부파일 (${files.length}개)</div>
         <div class="view-files-list">
-          ${files.map(f=>`
+          ${files.map(f => `
             <a class="view-file-link" href="${f.url}" target="_blank" download="${esc(f.name)}">
               <span>📄</span>
               <span class="view-file-link-name">${esc(f.name)}</span>
@@ -386,7 +496,7 @@
             </a>`).join('')}
         </div>
       </div>` : '';
-    document.getElementById('viewContent').innerHTML=`
+    document.getElementById('viewContent').innerHTML = `
       <div class="view-meta">
         <span class="view-dept-tag" style="background:${color}">${p.dept}</span>
         <span class="view-author">${esc(p.author)}</span>
@@ -397,227 +507,203 @@
       ${filesHTML}`;
     document.getElementById('viewModal').classList.add('open');
   }
-  function closeViewModal(){ document.getElementById('viewModal').classList.remove('open'); viewingPostId=null; }
 
-  // EDIT
+  function closeViewModal() {
+    document.getElementById('viewModal').classList.remove('open');
+    viewingPostId = null;
+  }
+
+  // ===== 작성/수정 모달 =====
   function openEditFromView() {
-    const p=allPosts.find(x=>x.id===viewingPostId); if(!p) return;
-    closeViewModal(); openPostModal(null,p);
+    const p = allPosts.find(x => x.id === viewingPostId);
+    if(!p) return;
+    closeViewModal();
+    openPostModal(null, p);
   }
 
   function openPostModal(dept, editPost) {
     resetForm();
     if(editPost) {
-      document.getElementById('postModalTitle').textContent='✏️ 게시물 수정';
-      document.getElementById('postSubmitBtn').textContent='저장하기';
-      document.getElementById('editPostId').value=editPost.id;
-      document.getElementById('postDept').value=editPost.dept;
-      document.getElementById('postAuthor').value=editPost.author;
-      document.getElementById('postTitle').value=editPost.title;
-      document.getElementById('postBody').value=editPost.body||'';
-      existingFiles = (editPost.files||[]).map(f=>({...f}));
+      document.getElementById('postModalTitle').textContent = '✏️ 게시물 수정';
+      document.getElementById('postSubmitBtn').textContent = '저장하기';
+      document.getElementById('editPostId').value = editPost.id;
+      document.getElementById('postDept').value = editPost.dept;
+      document.getElementById('postAuthor').value = editPost.author;
+      document.getElementById('postTitle').value = editPost.title;
+      document.getElementById('postBody').value = editPost.body || '';
+      existingFiles = (editPost.files || []).map(f => ({...f}));
     } else {
-      document.getElementById('postModalTitle').textContent='📋 새 게시물 작성';
-      document.getElementById('postSubmitBtn').textContent='게시하기';
-      if(dept) document.getElementById('postDept').value=dept;
+      document.getElementById('postModalTitle').textContent = '📋 새 게시물 작성';
+      document.getElementById('postSubmitBtn').textContent = '게시하기';
+      if(dept) document.getElementById('postDept').value = dept;
     }
     renderFileList();
     document.getElementById('postModal').classList.add('open');
   }
 
-  function closePostModal(){ document.getElementById('postModal').classList.remove('open'); resetForm(); }
+  function closePostModal() {
+    document.getElementById('postModal').classList.remove('open');
+    resetForm();
+  }
 
   function resetForm() {
-    ['editPostId','postAuthor','postTitle','postBody'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('postDept').value='';
-    document.getElementById('postFileInput').value='';
-    pendingFiles=[];
-    existingFiles=[];
+    ['editPostId','postAuthor','postTitle','postBody'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('postDept').value = '';
+    document.getElementById('postFileInput').value = '';
+    pendingFiles = [];
+    existingFiles = [];
     renderFileList();
   }
 
-  // ===== 다중 파일 처리 =====
-  function setupDragDrop() {
-    const area=document.getElementById('fileDropArea');
-    area.addEventListener('dragover',e=>{e.preventDefault();area.classList.add('dragover')});
-    area.addEventListener('dragleave',()=>area.classList.remove('dragover'));
-    area.addEventListener('drop',e=>{
-      e.preventDefault(); area.classList.remove('dragover');
-      addFiles(e.dataTransfer.files);
+  // ===== 파일 업로드 =====
+  async function uploadOne(file, idx) {
+    const ext = file.name.split('.').pop();
+    const safeName = `${Date.now()}_${idx}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const { error } = await db.storage.from(BUCKET).upload(safeName, file, {
+      cacheControl: '3600',
+      upsert: false
     });
-  }
-
-  function handleFileSelect(input){
-    addFiles(input.files);
-    input.value=''; // 같은 파일 다시 선택 가능하게 초기화
-  }
-
-  function addFiles(fileList) {
-    if(!fileList || fileList.length===0) return;
-    const arr = Array.from(fileList);
-    // 50MB 초과 파일 제외
-    const valid = arr.filter(f=>{
-      if(f.size > 50*1024*1024){ showToast(`"${f.name}" 50MB 초과 - 제외됨`); return false; }
-      return true;
-    });
-    // 중복 이름 검사 (간단하게 이름+크기 기준)
-    valid.forEach(f=>{
-      const dup = pendingFiles.some(x=>x.name===f.name && x.size===f.size);
-      if(!dup) pendingFiles.push(f);
-    });
-    renderFileList();
-  }
-
-  function renderFileList() {
-    const list=document.getElementById('fileList');
-    const summary=document.getElementById('fileListSummary');
-    list.innerHTML='';
-
-    // 기존 파일 (수정 모드)
-    existingFiles.forEach((f,idx)=>{
-      const el=document.createElement('div');
-      el.className='file-list-item existing';
-      el.innerHTML=`
-        <span class="file-list-icon">📎</span>
-        <span class="file-list-name">${esc(f.name)}</span>
-        <span class="file-list-size">${fmtSize(f.size)}</span>
-        <button class="file-list-remove" type="button" title="제거">×</button>`;
-      el.querySelector('.file-list-remove').onclick=()=>{
-        existingFiles.splice(idx,1); renderFileList();
-      };
-      list.appendChild(el);
-    });
-
-    // 새로 추가한 파일
-    pendingFiles.forEach((f,idx)=>{
-      const el=document.createElement('div');
-      el.className='file-list-item';
-      el.innerHTML=`
-        <span class="file-list-icon">📄</span>
-        <span class="file-list-name">${esc(f.name)}</span>
-        <span class="file-list-size">${fmtSize(f.size)}</span>
-        <button class="file-list-remove" type="button" title="제거">×</button>`;
-      el.querySelector('.file-list-remove').onclick=()=>{
-        pendingFiles.splice(idx,1); renderFileList();
-      };
-      list.appendChild(el);
-    });
-
-    const total = existingFiles.length + pendingFiles.length;
-    if(total>0){
-      summary.style.display='block';
-      summary.textContent=`총 ${total}개 파일 (기존 ${existingFiles.length} + 신규 ${pendingFiles.length})`;
-    } else {
-      summary.style.display='none';
-    }
-  }
-
-  async function uploadOne(file, idx, total) {
-    const ext=file.name.split('.').pop();
-    const path=`${Date.now()}_${idx}_${Math.random().toString(36).slice(2,8)}.${ext}`;
-    const {error}=await db.storage.from(BUCKET).upload(path,file,{cacheControl:'3600',upsert:false});
     if(error) throw error;
-    const {data:urlData}=db.storage.from(BUCKET).getPublicUrl(path);
-    return { url:urlData.publicUrl, name:file.name, size:file.size, path };
+    const { data: urlData } = db.storage.from(BUCKET).getPublicUrl(safeName);
+    return {
+      url: urlData.publicUrl,
+      name: file.name,
+      size: file.size,
+      path: safeName
+    };
   }
 
   async function uploadAllPending(submitBtn) {
-    const uploaded=[];
-    for(let i=0;i<pendingFiles.length;i++){
-      submitBtn.textContent=`업로드 중... (${i+1}/${pendingFiles.length})`;
-      const meta = await uploadOne(pendingFiles[i], i, pendingFiles.length);
-      uploaded.push(meta);
+    const uploaded = [];
+    const failed = [];
+    for(let i = 0; i < pendingFiles.length; i++) {
+      submitBtn.textContent = `업로드 중... (${i+1}/${pendingFiles.length})`;
+      try {
+        const meta = await uploadOne(pendingFiles[i], i);
+        uploaded.push(meta);
+      } catch(e) {
+        console.error(`파일 "${pendingFiles[i].name}" 업로드 실패:`, e);
+        failed.push(pendingFiles[i].name);
+      }
+    }
+    if(failed.length > 0) {
+      showToast(`⚠️ ${failed.length}개 파일 업로드 실패 (${failed[0]} 등)`);
     }
     return uploaded;
   }
 
   async function submitPost() {
-    const editId=document.getElementById('editPostId').value;
-    const dept=document.getElementById('postDept').value.trim();
-    const author=document.getElementById('postAuthor').value.trim();
-    const title=document.getElementById('postTitle').value.trim();
-    const body=document.getElementById('postBody').value.trim();
-    if(!dept||!author||!title){ showToast('부서, 작성자, 제목은 필수입니다.'); return; }
+    const editId = document.getElementById('editPostId').value;
+    const dept = document.getElementById('postDept').value.trim();
+    const author = document.getElementById('postAuthor').value.trim();
+    const title = document.getElementById('postTitle').value.trim();
+    const body = document.getElementById('postBody').value.trim();
+    if(!dept || !author || !title) {
+      showToast('부서, 작성자, 제목은 필수입니다.');
+      return;
+    }
 
-    const btn=document.getElementById('postSubmitBtn');
-    btn.disabled=true; btn.textContent='처리 중...';
+    const btn = document.getElementById('postSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
 
     try {
       const newlyUploaded = await uploadAllPending(btn);
       const finalFiles = [...existingFiles, ...newlyUploaded];
 
       if(editId) {
-        // 수정 시 - 기존 파일 중 사용자가 제거한 것은 storage에서 삭제
-        const original = allPosts.find(p=>p.id===editId);
-        const keptPaths = new Set(existingFiles.map(f=>f.path).filter(Boolean));
-        const toDelete = (original?.files||[]).filter(f=>f.path && !keptPaths.has(f.path)).map(f=>f.path);
-        if(toDelete.length>0) {
+        const original = allPosts.find(p => p.id === editId);
+        const keptPaths = new Set(existingFiles.map(f => f.path).filter(Boolean));
+        const toDelete = (original?.files || []).filter(f => f.path && !keptPaths.has(f.path)).map(f => f.path);
+        if(toDelete.length > 0) {
           try { await db.storage.from(BUCKET).remove(toDelete); }
-          catch(e){ console.warn('일부 파일 삭제 실패:',e); }
+          catch(e) { console.warn('일부 파일 삭제 실패:', e); }
         }
-
-        const {data,error}=await db.from('posts').update({dept,author,title,body,files:finalFiles}).eq('id',editId).select();
+        const { data, error } = await db.from('posts')
+          .update({dept, author, title, body, files: finalFiles, updated_at: new Date().toISOString()})
+          .eq('id', editId)
+          .select();
         if(error) throw error;
-        allPosts=allPosts.map(p=>p.id===editId?data[0]:p);
+        allPosts = allPosts.map(p => p.id === editId ? data[0] : p);
         showToast('✅ 게시물이 수정되었습니다!');
       } else {
-        const {data,error}=await db.from('posts').insert([{dept,author,title,body,files:finalFiles}]).select();
+        const { data, error } = await db.from('posts')
+          .insert([{dept, author, title, body, files: finalFiles}])
+          .select();
         if(error) throw error;
-        allPosts=[data[0],...allPosts];
-        showToast(`✅ 게시물이 등록되었습니다! ${finalFiles.length>0?`(파일 ${finalFiles.length}개)`:''}`);
+        allPosts = [data[0], ...allPosts];
+        showToast(`✅ 게시물 등록 완료! ${finalFiles.length > 0 ? `(파일 ${finalFiles.length}개)` : ''}`);
       }
-      closePostModal(); renderAll(); updateTabCounts();
+      closePostModal();
+      renderAll();
+      updateTabCounts();
     } catch(e) {
-      showToast('오류: '+e.message);
-      console.error(e);
+      console.error('submitPost error:', e);
+      showToast('오류: ' + e.message);
     } finally {
-      btn.disabled=false;
-      btn.textContent=document.getElementById('editPostId').value?'저장하기':'게시하기';
+      btn.disabled = false;
+      btn.textContent = document.getElementById('editPostId').value ? '저장하기' : '게시하기';
     }
   }
 
-  // DELETE
-  function confirmDelete(){ document.getElementById('confirmModal').classList.add('open'); }
-  function closeConfirmModal(){ document.getElementById('confirmModal').classList.remove('open'); }
+  // ===== 삭제 =====
+  function confirmDelete() { document.getElementById('confirmModal').classList.add('open'); }
+  function closeConfirmModal() { document.getElementById('confirmModal').classList.remove('open'); }
 
   async function deletePost() {
     if(!viewingPostId) return;
-    const p=allPosts.find(x=>x.id===viewingPostId);
-    // 모든 첨부파일 삭제
-    if(p && p.files && p.files.length>0) {
+    const p = allPosts.find(x => x.id === viewingPostId);
+    if(p && p.files && p.files.length > 0) {
       try {
-        const paths = p.files.map(f=>f.path).filter(Boolean);
-        if(paths.length>0) await db.storage.from(BUCKET).remove(paths);
-      } catch(e){ console.warn('파일 삭제 실패:',e); }
+        const paths = p.files.map(f => f.path).filter(Boolean);
+        if(paths.length > 0) await db.storage.from(BUCKET).remove(paths);
+      } catch(e) { console.warn('파일 삭제 실패:', e); }
     }
-    const {error}=await db.from('posts').delete().eq('id',viewingPostId);
-    if(error){ showToast('삭제 오류: '+error.message); return; }
-    allPosts=allPosts.filter(x=>x.id!==viewingPostId);
-    closeConfirmModal(); closeViewModal(); renderAll(); updateTabCounts();
+    const { error } = await db.from('posts').delete().eq('id', viewingPostId);
+    if(error) {
+      showToast('삭제 오류: ' + error.message);
+      return;
+    }
+    allPosts = allPosts.filter(x => x.id !== viewingPostId);
+    closeConfirmModal();
+    closeViewModal();
+    renderAll();
+    updateTabCounts();
     showToast('🗑️ 게시물이 삭제되었습니다.');
   }
 
-  // UTILS
+  // ===== 유틸 =====
   function fmtTime(iso) {
     if(!iso) return '';
-    const diff=(Date.now()-new Date(iso))/1000;
-    if(diff<60) return '방금 전';
-    if(diff<3600) return Math.floor(diff/60)+'분 전';
-    if(diff<86400) return Math.floor(diff/3600)+'시간 전';
-    const d=new Date(iso); return `${d.getMonth()+1}/${d.getDate()}`;
+    const diff = (Date.now() - new Date(iso)) / 1000;
+    if(diff < 60) return '방금 전';
+    if(diff < 3600) return Math.floor(diff/60) + '분 전';
+    if(diff < 86400) return Math.floor(diff/3600) + '시간 전';
+    const d = new Date(iso);
+    return `${d.getMonth()+1}/${d.getDate()}`;
   }
   function fmtSize(bytes) {
     if(!bytes) return '';
-    if(bytes<1024) return bytes+'B';
-    if(bytes<1024*1024) return (bytes/1024).toFixed(1)+'KB';
-    return (bytes/(1024*1024)).toFixed(1)+'MB';
+    if(bytes < 1024) return bytes + 'B';
+    if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + 'KB';
+    return (bytes/(1024*1024)).toFixed(1) + 'MB';
   }
-  function esc(str){ return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+  function esc(str) {
+    return (str||'').toString()
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._tid);
+    showToast._tid = setTimeout(() => t.classList.remove('show'), 3000);
+  }
 
-  document.getElementById('postModal').addEventListener('click',function(e){if(e.target===this)closePostModal()});
-  document.getElementById('viewModal').addEventListener('click',function(e){if(e.target===this)closeViewModal()});
-  document.getElementById('confirmModal').addEventListener('click',function(e){if(e.target===this)closeConfirmModal()});
+  document.getElementById('postModal').addEventListener('click', function(e) { if(e.target === this) closePostModal(); });
+  document.getElementById('viewModal').addEventListener('click', function(e) { if(e.target === this) closeViewModal(); });
+  document.getElementById('confirmModal').addEventListener('click', function(e) { if(e.target === this) closeConfirmModal(); });
 
   init();
 </script>
